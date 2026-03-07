@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int                 @id @default(autoincrement())
+  name            String
+  email           String              @unique
+  password        String
+  role            String              @default("SUPERVISOR") // ADMIN, SUPERVISOR, OWNER
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  ActivityLogs    ActivityLog[]
+  DieselLogs      DieselLog[]         @relation("SupervisorLogs")
+  PurchaseOrders  PurchaseOrder[]
+  InventoryItems  InventoryItem[]
+}
+
+model Vehicle {
+  id              Int           @id @default(autoincrement())
+  vehicleNumber   String        @unique
+  driverName      String?
+  vehicleType     String
+  mileage         Float?
+  lastServiceDate DateTime?
+  nextServiceDate DateTime?
+  status          String        @default("ACTIVE") // ACTIVE, MAINTENANCE, INACTIVE
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  DieselLogs      DieselLog[]
+  Maintenances    Maintenance[]
+}
+
+model Driver {
+  id            Int             @id @default(autoincrement())
+  name          String
+  licenseNumber String?         @unique
+  phone         String?
+  status        String          @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  TruckDispatches TruckDispatch[]
+}
+
+model DieselLog {
+  id            Int      @id @default(autoincrement())
+  date          DateTime @default(now())
+  vehicleId     Int?
+  vehicle       Vehicle? @relation(fields: [vehicleId], references: [id])
+  type          String   @default("FILLED") // FILLED or BOUGHT
+  dieselFilled  Float
+  pricePerLitre Float
+  totalCost     Float
+  supplier      String?  // For purchased diesel
+  location      String?  // Where diesel was purchased
+  remarks       String?
+  supervisorId  Int
+  supervisor    User     @relation("SupervisorLogs", fields: [supervisorId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model TruckDispatch {
+  id              Int           @id @default(autoincrement())
+  date            DateTime      @default(now())
+  truckNumber     String
+  driverId        Int?
+  driver          Driver?       @relation(fields: [driverId], references: [id])
+  materialType    String
+  tonnage         Float
+  destination     String
+  buyer           String?
+  pricePerTon     Float
+  totalRevenue    Float
+  
+  // PO Integration
+  purchaseOrderId Int?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  
+  // Payment Fields
+  transportPricePerTon Float
+  totalTransportValue  Float
+  advanceAmount        Float
+  balanceAmount        Float
+  advancePaid          Boolean @default(false)
+  balancePaid          Boolean @default(false)
+  paymentStatus        String  @default("PENDING") // PENDING, ADVANCE_PAID, BALANCE_PAID, FULLY_PAID
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Expense {
+  id            Int      @id @default(autoincrement())
+  date          DateTime @default(now())
+  category      String   // DIESEL, LABOUR, DRIVER, MACHINE_REPAIR, SPARE_PARTS, TRANSPORT, OTHER
+  amount        Float
+  paymentMethod String?
+  description   String?
+  voucherNo     String?  // Voucher number for tracking
+  paidTo        String?  // Person/entity being paid
+  paidBy        String?  // Person who made the payment
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Maintenance {
+  id                 Int      @id @default(autoincrement())
+  vehicleId          Int
+  vehicle            Vehicle  @relation(fields: [vehicleId], references: [id])
+  partReplaced       String
+  cost               Float
+  date               DateTime @default(now())
+  nextMaintenanceDue DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Labour {
+  id        Int      @id @default(autoincrement())
+  name      String
+  date      DateTime @default(now())
+  inTime    String?
+  outTime   String?
+  workType  String
+  payment   Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Document {
+  id         Int      @id @default(autoincrement())
+  fileName   String
+  fileUrl    String
+  type       String   // ROYALTY_BILL, INVOICE, EWAY_BILL, TRANSPORT_DOC, OTHER
+  uploadedAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  user           User     @relation(fields: [userId], references: [id])
+  action         String
+  moduleAffected String
+  timestamp      DateTime @default(now())
+}
+
+// Purchase Order Management
+model PurchaseOrder {
+  id              Int                @id @default(autoincrement())
+  poNumber        String             @unique
+  orderDate       DateTime           @default(now())
+  deliveryDate    DateTime?
+  supplierName    String
+  supplierContact String?
+  gstNo           String?            // GST Identification Number
+  gstDetails      String?            // Additional GST details (state, rate, etc.)
+  status          String             @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED, CANCELLED
+  totalAmount     Float              @default(0)
+  paymentTerms    String?
+  notes           String?
+  createdBy       Int
+  user            User               @relation(fields: [createdBy], references: [id])
+  items           PurchaseOrderItem[]
+  TruckDispatches TruckDispatch[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model PurchaseOrderItem {
+  id             Int             @id @default(autoincrement())
+  purchaseOrderId Int
+  purchaseOrder  PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  itemName       String
+  itemType       String          // MATERIAL, EQUIPMENT, PARTS, FUEL, OTHER
+  quantity       Float
+  unit           String          // LITERS, KG, PIECES, etc.
+  unitPrice      Float
+  totalPrice     Float
+  specifications String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+// Inventory/Storage Management
+model InventoryItem {
+  id              Int      @id @default(autoincrement())
+  itemName        String
+  itemType        String   // SPARE_PART, TOOL, EQUIPMENT, CONSUMABLE, MATERIAL, OTHER
+  category        String?  // ENGINE, ELECTRICAL, HYDRAULIC, TIRE, etc.
+  partNumber      String?  // Manufacturer part number
+  quantity        Float    @default(0)
+  unit            String   @default("PIECES") // PIECES, LITERS, KG, METERS, etc.
+  minStock        Float    @default(0)  // Minimum stock level for alerts
+  maxStock        Float?   // Maximum stock level
+  location        String?  // Storage room location (Rack A, Shelf B, etc.)
+  supplier        String?  // Preferred supplier
+  lastPurchasePrice Float? @default(0)
+  totalValue      Float    @default(0)  // quantity * lastPurchasePrice
+  description     String?
+  status          String   @default("IN_STOCK") // IN_STOCK, LOW_STOCK, OUT_OF_STOCK, DISCONTINUED
+  addedBy         Int?
+  user            User?    @relation(fields: [addedBy], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Site Management
+model Site {
+  id              Int           @id @default(autoincrement())
+  siteName        String
+  location        String
+  startDate       DateTime?
+  endDate         DateTime?
+  status          String        @default("ACTIVE") // ACTIVE, COMPLETED, ON_HOLD
+  siteManager     String?
+  contactNumber   String?
+  description     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  staff           SiteStaff[]
+  vehicles        SiteVehicle[]
+  machines        SiteMachine[]
+  blastRecords    BlastRecord[]
+}
+
+model SiteStaff {
+  id              Int      @id @default(autoincrement())
+  siteId          Int
+  site            Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name            String
+  role            String   // MANAGER, SUPERVISOR, OPERATOR, LABORER, SECURITY, OTHER
+  phone           String?
+  email           String?
+  aadharNumber    String?
+  assignedDate    DateTime @default(now())
+  isActive        Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SiteVehicle {
+  id              Int      @id @default(autoincrement())
+  siteId          Int
+  site            Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  vehicleNumber   String
+  vehicleType     String   // TRUCK, EXCAVATOR, LOADER, CRANE, DOZER, JCB, OTHER
+  driverName      String?
+  driverPhone     String?
+  status          String   @default("ACTIVE") // ACTIVE, MAINTENANCE, IDLE
+  fuelLevel       Float?   @default(0)  // Percentage
+  hoursWorked     Float?   @default(0)  // Hours
+  lastService     DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SiteMachine {
+  id              Int      @id @default(autoincrement())
+  siteId          Int
+  site            Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  machineName     String
+  machineType     String   // GENERATOR, COMPRESSOR, PUMP, MIXER, CRUSHER, OTHER
+  modelNumber     String?
+  serialNumber    String?
+  capacity        String?  // e.g., "500 kVA", "100 CFM"
+  status          String   @default("OPERATIONAL") // OPERATIONAL, UNDER_REPAIR, OUT_OF_ORDER
+  purchaseDate    DateTime?
+  lastMaintenance DateTime?
+  nextMaintenance DateTime?
+  hoursUsed       Float?   @default(0)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Blasting Management
+model BlastRecord {
+  id              Int      @id @default(autoincrement())
+  date            DateTime @default(now())
+  siteId          Int?
+  site            Site?    @relation(fields: [siteId], references: [id])
+  blastNumber     String   // Unique blast identifier
+  location        String   // Specific blast location
+  totalHoles      Int      // Number of drill holes
+  holeDepth       Float    // Depth in meters
+  explosiveUsed   Float    // Total explosive in kg
+  detonatorCount  Int      // Number of detonators
+  powderFactor    Float    // Explosive per cubic meter (kg/m³)
+  volumeBlasted   Float    // Volume blasted in m³
+  chargePerHole   Float    // Average charge per hole
+  stemmingLength  Float?   // Stemming length in meters
+  blastingTime    DateTime? // Actual blast time
+  supervisor      String?  // Blasting supervisor
+  agency          String?  // Blasting agency/company
+  weatherCondition String? // Weather during blast
+  vibrationLevel  Float?   // Vibration level (if monitored)
+  flyrockDistance Float?   // Flyrock distance observed
+  safetyMeasures  String?  // Safety measures taken
+  remarks         String?
+  status          String   @default("COMPLETED") // PLANNED, COMPLETED, CANCELLED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
