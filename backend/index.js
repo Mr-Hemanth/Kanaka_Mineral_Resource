@@ -10,7 +10,11 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-    origin: '*', // Allow all origins for Vercel deployment
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        // or any origin (this allows multiple frontends)
+        callback(null, true);
+    },
     credentials: true,
 }));
 app.use(express.json());
