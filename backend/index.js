@@ -24,6 +24,11 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Mine Management API is running on port 3500' });
 });
 
+// Root endpoint so Vercel doesn't return 404 "Cannot GET /"
+app.get('/', (req, res) => {
+    res.json({ message: 'Welcome to the Kanaka Minerals API. The server is online.' });
+});
+
 const authRoutes = require('./routes/authRoutes');
 const vehicleRoutes = require('./routes/vehicleRoutes');
 const dieselRoutes = require('./routes/dieselRoutes');
