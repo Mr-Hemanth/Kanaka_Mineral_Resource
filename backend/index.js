@@ -11,12 +11,13 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        // or any origin (this allows multiple frontends)
         callback(null, true);
     },
     credentials: true,
 }));
+
+// Handle preflight requests for all routes
+app.options('*', cors());
 app.use(express.json());
 
 // Test endpoint to verify server is running
