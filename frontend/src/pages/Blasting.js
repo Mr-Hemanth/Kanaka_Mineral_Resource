@@ -4,15 +4,12 @@ import {
     TableHead, TableRow, IconButton, Button, Dialog, DialogTitle,
     DialogContent, DialogActions, TextField, Grid, Chip, Alert,
     CircularProgress, Snackbar, MenuItem, Select, FormControl, InputLabel,
-    Card, CardContent, Badge, Divider, Autocomplete, Avatar, Tooltip,
+    Divider, Autocomplete, Avatar, Tooltip,
 } from '@mui/material';
 import {
     Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
-    Visibility as ViewIcon, Warning as WarningIcon, Cancel as CancelIcon, 
-    Assessment as AssessmentIcon, CalendarToday as CalendarIcon, 
-    LocationOn as LocationIcon, Person as PersonIcon, Business as BusinessIcon, 
-    AccessTime as AccessTimeIcon, Security as SecurityIcon, Engineering as EngineeringIcon, 
-    TrendingUp as TrendingIcon, Gavel as BlastIcon, CheckCircle as CheckCircleIcon,
+    Visibility as ViewIcon, Warning as WarningIcon, Cancel as CancelIcon,
+    Assessment as AssessmentIcon, Gavel as BlastIcon, CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
@@ -24,25 +21,25 @@ const Blasting = () => {
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [loading, setLoading] = useState(true);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-    
+
     // Permission checks
     const isAdmin = user?.role === 'ADMIN';
     const isSupervisor = user?.role === 'SUPERVISOR';
     const canEdit = isAdmin;  // Only Admin can edit
     const canDelete = isAdmin;  // Only Admin can delete
     const canAdd = isAdmin || isSupervisor;  // Admin & Supervisor can add
-    
+
     // Dialogs
     const [recordDialog, setRecordDialog] = useState(false);
     const [deleteDialog, setDeleteDialog] = useState(false);
     const [viewDialog, setViewDialog] = useState(false);
-    
+
     // Search & Filter
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [siteFilter, setSiteFilter] = useState(null);
     const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-    
+
     // Form
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -71,6 +68,7 @@ const Blasting = () => {
     useEffect(() => {
         fetchSites();
         fetchRecords();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pagination.page, search, statusFilter, siteFilter]);
 
     const fetchSites = async () => {
@@ -205,13 +203,13 @@ const Blasting = () => {
         return colors[status] || 'default';
     };
 
-    const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
+
 
     return (
         <Box>
             {/* Page Header */}
-            <Box sx={{ 
-                mb: 4, 
+            <Box sx={{
+                mb: 4,
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderRadius: 3,
                 p: 3,
@@ -219,9 +217,9 @@ const Blasting = () => {
                 color: 'white'
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ 
-                        bgcolor: 'rgba(255,255,255,0.2)', 
-                        width: 56, 
+                    <Avatar sx={{
+                        bgcolor: 'rgba(255,255,255,0.2)',
+                        width: 56,
                         height: 56,
                         boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                     }}>
@@ -239,8 +237,8 @@ const Blasting = () => {
             </Box>
 
             {/* Filters */}
-            <Paper elevation={0} sx={{ 
-                p: 3, 
+            <Paper elevation={0} sx={{
+                p: 3,
                 mb: 3,
                 borderRadius: 3,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
@@ -281,9 +279,9 @@ const Blasting = () => {
                             options={sites}
                             getOptionLabel={(option) => option.siteName}
                             renderInput={(params) => (
-                                <TextField 
-                                    {...params} 
-                                    label="Filter by Site" 
+                                <TextField
+                                    {...params}
+                                    label="Filter by Site"
                                     InputProps={{
                                         ...params.InputProps,
                                         startAdornment: (
@@ -304,7 +302,7 @@ const Blasting = () => {
                                 variant="contained"
                                 startIcon={<AddIcon />}
                                 onClick={() => handleOpenDialog()}
-                                sx={{ 
+                                sx={{
                                     height: '56px',
                                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                     boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
@@ -322,16 +320,16 @@ const Blasting = () => {
             </Paper>
 
             {/* Records Table */}
-            <Paper elevation={0} sx={{ 
+            <Paper elevation={0} sx={{
                 borderRadius: 3,
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 border: '1px solid rgba(0,0,0,0.08)',
                 overflow: 'hidden'
             }}>
                 {loading ? (
-                    <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'center', 
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
                         p: 8,
                         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
                         borderRadius: 3
@@ -341,7 +339,7 @@ const Blasting = () => {
                 ) : (
                     <TableContainer>
                         <Table>
-                            <TableHead sx={{ 
+                            <TableHead sx={{
                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             }}>
                                 <TableRow>
@@ -356,9 +354,9 @@ const Blasting = () => {
                                         { label: 'Status', icon: '✅' },
                                         { label: 'Actions', icon: '🔧' },
                                     ].map((col) => (
-                                        <TableCell 
+                                        <TableCell
                                             key={col.label}
-                                            sx={{ 
+                                            sx={{
                                                 fontWeight: 'bold',
                                                 color: 'white',
                                                 fontSize: '0.9rem',
@@ -374,8 +372,8 @@ const Blasting = () => {
                             </TableHead>
                             <TableBody>
                                 {records.map((record, index) => (
-                                    <TableRow 
-                                        key={record.id} 
+                                    <TableRow
+                                        key={record.id}
                                         hover
                                         sx={{
                                             '&:hover': {
@@ -400,20 +398,20 @@ const Blasting = () => {
                                                 color={getStatusColor(record.status)}
                                                 icon={
                                                     record.status === 'COMPLETED' ? <CheckCircleIcon fontSize="small" /> :
-                                                    record.status === 'PLANNED' ? <WarningIcon fontSize="small" /> :
-                                                    <CancelIcon fontSize="small" />
+                                                        record.status === 'PLANNED' ? <WarningIcon fontSize="small" /> :
+                                                            <CancelIcon fontSize="small" />
                                                 }
                                             />
                                         </TableCell>
                                         <TableCell align="right">
                                             <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                                                 <Tooltip title="View Details" placement="left">
-                                                    <IconButton 
-                                                        size="small" 
+                                                    <IconButton
+                                                        size="small"
                                                         onClick={() => handleView(record)}
                                                         sx={{
                                                             color: '#667eea',
-                                                            '&:hover': { 
+                                                            '&:hover': {
                                                                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
                                                                 transform: 'scale(1.1)',
                                                             },
@@ -424,12 +422,12 @@ const Blasting = () => {
                                                 </Tooltip>
                                                 {canEdit && (
                                                     <Tooltip title="Edit Record" placement="left">
-                                                        <IconButton 
-                                                            size="small" 
+                                                        <IconButton
+                                                            size="small"
                                                             onClick={() => handleOpenDialog(record)}
                                                             sx={{
                                                                 color: '#f59e0b',
-                                                                '&:hover': { 
+                                                                '&:hover': {
                                                                     backgroundColor: 'rgba(245, 158, 11, 0.1)',
                                                                     transform: 'scale(1.1)',
                                                                 },
@@ -441,12 +439,12 @@ const Blasting = () => {
                                                 )}
                                                 {canDelete && (
                                                     <Tooltip title="Delete Record" placement="left">
-                                                        <IconButton 
-                                                            size="small" 
+                                                        <IconButton
+                                                            size="small"
                                                             color="error"
                                                             onClick={() => { setSelectedRecord(record); setDeleteDialog(true); }}
                                                             sx={{
-                                                                '&:hover': { 
+                                                                '&:hover': {
                                                                     backgroundColor: 'rgba(239, 68, 68, 0.1)',
                                                                     transform: 'scale(1.1)',
                                                                 },
@@ -474,9 +472,9 @@ const Blasting = () => {
             </Paper>
 
             {/* Pagination */}
-            <Paper elevation={0} sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
+            <Paper elevation={0} sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 p: 2,
                 mt: 2,
@@ -584,7 +582,7 @@ const Blasting = () => {
                             <Grid item xs={6}><Typography variant="body2">Location:</Typography><Typography>{selectedRecord.location}</Typography></Grid>
                             <Grid item xs={6}><Typography variant="body2">Site:</Typography><Typography>{selectedRecord.site?.siteName || 'N/A'}</Typography></Grid>
                             <Grid item xs={6}><Typography variant="body2">Status:</Typography><Chip label={selectedRecord.status} size="small" color={getStatusColor(selectedRecord.status)} /></Grid>
-                            
+
                             <Grid item xs={12} sx={{ mt: 2 }}><Typography variant="subtitle1" fontWeight="bold">Drilling & Explosive Details</Typography></Grid>
                             <Grid item xs={6}><Typography variant="body2">Total Holes:</Typography><Typography>{selectedRecord.totalHoles}</Typography></Grid>
                             <Grid item xs={6}><Typography variant="body2">Hole Depth:</Typography><Typography>{selectedRecord.holeDepth} m</Typography></Grid>
