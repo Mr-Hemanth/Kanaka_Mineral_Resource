@@ -2,7 +2,7 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 
 const api = axios.create({
-    baseURL: '/api',
+    baseURL: process.env.REACT_APP_API_URL || '/api',
 });
 
 // Add a request interceptor to include the auth token
