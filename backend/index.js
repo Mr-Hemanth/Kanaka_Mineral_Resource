@@ -16,8 +16,7 @@ app.use(cors({
     credentials: true,
 }));
 
-// Handle preflight requests for all routes
-app.options('*', cors());
+// Preflight requests are handled by vercel.json headers now
 app.use(express.json());
 
 // Test endpoint to verify server is running
