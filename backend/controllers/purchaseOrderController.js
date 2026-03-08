@@ -31,7 +31,11 @@ const getPurchaseOrders = async (req, res) => {
         }
 
         if (status) {
-            where.status = status;
+            if (status.includes(',')) {
+                where.status = { in: status.split(',') };
+            } else {
+                where.status = status;
+            }
         }
 
         if (startDate || endDate) {
