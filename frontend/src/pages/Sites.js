@@ -8,10 +8,9 @@ import {
 } from '@mui/material';
 import {
     Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
-    Visibility as ViewIcon, Business as BusinessIcon,
-    People as PeopleIcon, LocalShipping as VehicleIcon,
+    Business as BusinessIcon, People as PeopleIcon, LocalShipping as VehicleIcon,
     PrecisionManufacturing as MachineIcon, CheckCircle as CheckCircleIcon,
-    Warning as WarningIcon, Build as BuildIcon,
+    Warning as WarningIcon,
 } from '@mui/icons-material';
 import api from '../utils/api';
 
@@ -21,7 +20,7 @@ const Sites = () => {
     const [loading, setLoading] = useState(true);
     const [tabValue, setTabValue] = useState(0);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-    
+
     // Dialogs
     const [siteDialog, setSiteDialog] = useState(false);
     const [staffDialog, setStaffDialog] = useState(false);
@@ -29,12 +28,12 @@ const Sites = () => {
     const [machineDialog, setMachineDialog] = useState(false);
     const [deleteDialog, setDeleteDialog] = useState(false);
     const [deleteType, setDeleteType] = useState(''); // 'site', 'staff', 'vehicle', 'machine'
-    
+
     // Data
     const [staff, setStaff] = useState([]);
     const [vehicles, setVehicles] = useState([]);
     const [machines, setMachines] = useState([]);
-    
+
     // Forms
     const [siteForm, setSiteForm] = useState({
         siteName: '',
@@ -46,7 +45,7 @@ const Sites = () => {
         contactNumber: '',
         description: '',
     });
-    
+
     const [staffForm, setStaffForm] = useState({
         name: '',
         role: 'OTHER',
@@ -55,7 +54,7 @@ const Sites = () => {
         aadharNumber: '',
         notes: '',
     });
-    
+
     const [vehicleForm, setVehicleForm] = useState({
         vehicleNumber: '',
         vehicleType: 'OTHER',
@@ -66,7 +65,7 @@ const Sites = () => {
         lastService: new Date().toISOString().split('T')[0],
         notes: '',
     });
-    
+
     const [machineForm, setMachineForm] = useState({
         machineName: '',
         machineType: 'OTHER',

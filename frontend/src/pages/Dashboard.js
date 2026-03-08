@@ -20,8 +20,8 @@ import {
 import api from '../utils/api';
 import {
     LocalShipping, LocalGasStation, Receipt, AccountBalanceWallet,
-    TrendingUp, TrendingDown, ShoppingCart, CheckCircle, Warning,
-    Engineering, People, AttachMoney
+    TrendingUp, TrendingDown, ShoppingCart, Warning,
+    People
 } from '@mui/icons-material';
 
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
@@ -37,6 +37,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchDashboardData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [period]);
 
     const fetchDashboardData = async () => {
@@ -86,10 +87,10 @@ const Dashboard = () => {
                             </Box>
                         )}
                     </Box>
-                    <Box sx={{ 
-                        p: 1.5, 
-                        borderRadius: '50%', 
-                        backgroundColor: `${color}.light`, 
+                    <Box sx={{
+                        p: 1.5,
+                        borderRadius: '50%',
+                        backgroundColor: `${color}.light`,
                         color: `${color}.main`,
                         display: 'flex',
                         alignItems: 'center',
@@ -237,17 +238,17 @@ const Dashboard = () => {
                             <AreaChart data={profitLossData}>
                                 <defs>
                                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                     </linearGradient>
                                     <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="date" tickLine={false} axisLine={false} />
-                                <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `₹${(value/1000).toFixed(1)}k`} />
+                                <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `₹${(value / 1000).toFixed(1)}k`} />
                                 <Tooltip formatter={(value) => formatCurrency(value)} />
                                 <Legend />
                                 <Area type="monotone" dataKey="Revenue" stroke="#10b981" fillOpacity={1} fill="url(#colorRevenue)" />
@@ -296,7 +297,7 @@ const Dashboard = () => {
                             <BarChart data={charts.expenseByCategory}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="category" tickLine={false} axisLine={false} angle={-45} textAnchor="end" height={80} />
-                                <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `₹${(value/1000).toFixed(1)}k`} />
+                                <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => `₹${(value / 1000).toFixed(1)}k`} />
                                 <Tooltip formatter={(value) => formatCurrency(value)} />
                                 <Bar dataKey="amount" fill="#2563eb" radius={[4, 4, 0, 0]} />
                             </BarChart>
@@ -333,7 +334,7 @@ const Dashboard = () => {
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={charts.topVehicles} layout="vertical">
                                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                                <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={(value) => `₹${(value/1000).toFixed(1)}k`} />
+                                <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={(value) => `₹${(value / 1000).toFixed(1)}k`} />
                                 <YAxis dataKey="truckNumber" type="category" tickLine={false} axisLine={false} width={100} />
                                 <Tooltip formatter={(value) => formatCurrency(value)} />
                                 <Bar dataKey="totalRevenue" fill="#10b981" radius={[0, 4, 4, 0]} />

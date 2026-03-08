@@ -35,7 +35,6 @@ import {
     TrendingUp as TrendingUpIcon,
     ShoppingCart as ShoppingCartIcon,
     CheckCircle as CheckCircleIcon,
-    Cancel as CancelIcon,
 } from '@mui/icons-material';
 import SearchFilter from '../components/SearchFilter';
 import api from '../utils/api';
@@ -92,6 +91,7 @@ const PurchaseOrders = () => {
     useEffect(() => {
         fetchPurchaseOrders();
         fetchStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pagination.currentPage, searchParams]);
 
     const fetchPurchaseOrders = async () => {
@@ -432,7 +432,7 @@ const PurchaseOrders = () => {
                             <TextField fullWidth label="Supplier Contact" value={formData.supplierContact} onChange={(e) => setFormData({ ...formData, supplierContact: e.target.value })} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField fullWidth label="GST Number" value={formData.gstNo} onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })} 
+                            <TextField fullWidth label="GST Number" value={formData.gstNo} onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
                                 placeholder="e.g., 29ABCDE1234F1Z5" />
                         </Grid>
                         <Grid item xs={12}>

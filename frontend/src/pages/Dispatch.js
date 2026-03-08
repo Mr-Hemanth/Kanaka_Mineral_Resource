@@ -8,10 +8,9 @@ import {
 } from '@mui/material';
 import {
     Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
-    Payment as PaymentIcon, CheckCircle as CheckCircleIcon,
-    Cancel as CancelIcon, Visibility as ViewIcon,
+    CheckCircle as CheckCircleIcon, Cancel as CancelIcon,
+    Visibility as ViewIcon,
 } from '@mui/icons-material';
-import SearchFilter from '../components/SearchFilter';
 import api from '../utils/api';
 
 const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
@@ -25,7 +24,7 @@ const Dispatch = () => {
     const [deleteDialog, setDeleteDialog] = useState(false);
     const [selectedDispatch, setSelectedDispatch] = useState(null);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-    
+
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
         truckNumber: '',
@@ -49,6 +48,7 @@ const Dispatch = () => {
     useEffect(() => {
         fetchDispatches();
         fetchPurchaseOrders();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchDispatches = async () => {
@@ -153,7 +153,7 @@ const Dispatch = () => {
         const totalTransportValue = parseFloat(transportPrice) * parseFloat(tonnage);
         const advanceAmount = totalTransportValue * 0.70; // 70%
         const balanceAmount = totalTransportValue * 0.30; // 30%
-        
+
         setFormData(prev => ({
             ...prev,
             totalTransportValue,
@@ -278,10 +278,10 @@ const Dispatch = () => {
                                         <TableCell align="right">{dispatch.tonnage}</TableCell>
                                         <TableCell>
                                             {dispatch.purchaseOrder ? (
-                                                <Chip 
-                                                    label={dispatch.purchaseOrder.poNumber} 
-                                                    size="small" 
-                                                    color="primary" 
+                                                <Chip
+                                                    label={dispatch.purchaseOrder.poNumber}
+                                                    size="small"
+                                                    color="primary"
                                                     variant="outlined"
                                                 />
                                             ) : (
@@ -292,9 +292,9 @@ const Dispatch = () => {
                                             {formatCurrency(dispatch.totalRevenue)}
                                         </TableCell>
                                         <TableCell>
-                                            <Chip 
-                                                label={dispatch.paymentStatus.replace('_', ' ')} 
-                                                size="small" 
+                                            <Chip
+                                                label={dispatch.paymentStatus.replace('_', ' ')}
+                                                size="small"
                                                 color={getPaymentStatusColor(dispatch.paymentStatus)}
                                             />
                                         </TableCell>
@@ -388,19 +388,19 @@ const Dispatch = () => {
                         </Grid>
 
                         <Grid item xs={12} sm={6}>
-                            <TextField 
-                                fullWidth 
-                                label="Transport Price Per Ton" 
+                            <TextField
+                                fullWidth
+                                label="Transport Price Per Ton"
                                 type="number"
-                                value={formData.transportPricePerTon} 
+                                value={formData.transportPricePerTon}
                                 onChange={handleTransportPriceChange}
                                 helperText="Enter transport rate per ton"
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField 
-                                fullWidth 
-                                label="Total Transport Value" 
+                            <TextField
+                                fullWidth
+                                label="Total Transport Value"
                                 value={formatCurrency(formData.totalTransportValue)}
                                 InputProps={{ readOnly: true }}
                                 sx={{ backgroundColor: '#f5f5f5' }}
@@ -409,9 +409,9 @@ const Dispatch = () => {
 
                         {/* Advance & Balance Calculation */}
                         <Grid item xs={12} sm={6}>
-                            <TextField 
-                                fullWidth 
-                                label="Advance (70%)" 
+                            <TextField
+                                fullWidth
+                                label="Advance (70%)"
                                 value={formatCurrency(formData.advanceAmount)}
                                 InputProps={{ readOnly: true }}
                                 sx={{ backgroundColor: '#e3f2fd' }}
@@ -419,9 +419,9 @@ const Dispatch = () => {
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField 
-                                fullWidth 
-                                label="Balance (30%)" 
+                            <TextField
+                                fullWidth
+                                label="Balance (30%)"
                                 value={formatCurrency(formData.balanceAmount)}
                                 InputProps={{ readOnly: true }}
                                 sx={{ backgroundColor: '#ffebee' }}
@@ -435,7 +435,7 @@ const Dispatch = () => {
                                 <FormGroup row>
                                     <FormControlLabel
                                         control={
-                                            <Checkbox 
+                                            <Checkbox
                                                 checked={formData.advancePaid}
                                                 onChange={(e) => setFormData({ ...formData, advancePaid: e.target.checked })}
                                             />
@@ -444,7 +444,7 @@ const Dispatch = () => {
                                     />
                                     <FormControlLabel
                                         control={
-                                            <Checkbox 
+                                            <Checkbox
                                                 checked={formData.balancePaid}
                                                 onChange={(e) => setFormData({ ...formData, balancePaid: e.target.checked })}
                                             />
@@ -497,7 +497,7 @@ const Dispatch = () => {
                             )}
                             <Grid item xs={12}><Typography><strong>Price Per Ton:</strong> ₹{selectedDispatch.pricePerTon}</Typography></Grid>
                             <Grid item xs={12}><Typography><strong>Total Revenue:</strong> {formatCurrency(selectedDispatch.totalRevenue)}</Typography></Grid>
-                            
+
                             <Grid item xs={12} sx={{ mt: 2, pt: 2, borderTop: '2px solid #f0f0f0' }}>
                                 <Typography variant="subtitle1" fontWeight="bold" color="primary">Payment Details</Typography>
                             </Grid>

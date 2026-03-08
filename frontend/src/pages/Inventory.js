@@ -11,7 +11,6 @@ import {
     Visibility as ViewIcon, RemoveCircleOutline as RemoveIcon,
     AddCircleOutline as AddStockIcon, Warning as WarningIcon,
     CheckCircle as CheckCircleIcon, Inventory as InventoryIcon,
-    Search as SearchIcon, FilterList as FilterIcon,
 } from '@mui/icons-material';
 import SearchFilter from '../components/SearchFilter';
 import api from '../utils/api';
@@ -28,7 +27,7 @@ const Inventory = () => {
     const [selectedItem, setSelectedItem] = useState(null);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [lowStockCount, setLowStockCount] = useState(0);
-    
+
     const [formData, setFormData] = useState({
         itemName: '',
         itemType: 'SPARE_PART',
@@ -79,6 +78,7 @@ const Inventory = () => {
     useEffect(() => {
         fetchInventory();
         fetchLowStockCount();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pagination.currentPage, searchParams]);
 
     const fetchInventory = async () => {
@@ -366,9 +366,9 @@ const Inventory = () => {
                                             </TableCell>
                                             <TableCell>{item.location || '-'}</TableCell>
                                             <TableCell>
-                                                <Chip 
-                                                    label={item.status.replace('_', ' ')} 
-                                                    size="small" 
+                                                <Chip
+                                                    label={item.status.replace('_', ' ')}
+                                                    size="small"
                                                     color={getStatusColor(item.status)}
                                                 />
                                             </TableCell>
