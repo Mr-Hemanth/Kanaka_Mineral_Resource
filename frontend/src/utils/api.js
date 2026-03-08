@@ -2,8 +2,10 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 
 const getBaseUrl = () => {
-    const envUrl = process.env.REACT_APP_API_URL;
+    let envUrl = process.env.REACT_APP_API_URL;
     if (envUrl) {
+        // Strip trailing slash if present to avoid //api
+        envUrl = envUrl.replace(/\/$/, '');
         // If they provided a URL but forgot the /api at the end, append it.
         return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
     }
