@@ -1,8 +1,17 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
+const getBaseUrl = () => {
+    const envUrl = process.env.REACT_APP_API_URL;
+    if (envUrl) {
+        // If they provided a URL but forgot the /api at the end, append it.
+        return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+    }
+    return '/api';
+};
+
 const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || '/api',
+    baseURL: getBaseUrl(),
 });
 
 // Add a request interceptor to include the auth token
