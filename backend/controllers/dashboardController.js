@@ -16,29 +16,18 @@ const getDashboardSummary = async (req, res) => {
             dateFilter.gte = today;
         }
 
-        // Run all queries in parallel
-        const [
-            activeVehicles,
-            totalVehicles,
-            dieselLogs,
-            expenses,
-            dispatches,
-            totalPOs,
-            pendingPOs,
-            labourCost
-        ] = await Promise.all([
-            prisma.vehicle.count({ where: { status: 'ACTIVE' } }),
-            prisma.vehicle.count(),
-            prisma.dieselLog.findMany({ where: { date: dateFilter } }),
-            prisma.expense.findMany({ where: { date: dateFilter } }),
-            prisma.truckDispatch.findMany({ where: { date: dateFilter } }),
-            prisma.purchaseOrder.count(),
-            prisma.purchaseOrder.count({ where: { status: 'PENDING' } }),
-            prisma.workerLog.aggregate({
-                _sum: { totalPayment: true },
-                where: { date: dateFilter }
-            })
-        ]);
+        // Run queries sequentially but much faster due to new DB indexes
+        const activeVehicles = await prisma.vehicle.count({ where: { status: 'ACTIVE' } });
+        const totalVehicles = await prisma.vehicle.count();
+        const dieselLogs = await prisma.dieselLog.findMany({ where: { date: dateFilter } });
+        const expenses = await prisma.expense.findMany({ where: { date: dateFilter } });
+        const dispatches = await prisma.truckDispatch.findMany({ where: { date: dateFilter } });
+        const totalPOs = await prisma.purchaseOrder.count();
+        const pendingPOs = await prisma.purchaseOrder.count({ where: { status: 'PENDING' } });
+        const labourCost = await prisma.workerLog.aggregate({
+            _sum: { totalPayment: true },
+            where: { date: dateFilter }
+        });
 
         const totalDieselUsed = dieselLogs.reduce((acc, log) => acc + log.dieselFilled, 0);
         const totalExpenses = expenses.reduce((acc, exp) => acc + exp.amount, 0);
@@ -72,85 +61,81 @@ const getDashboardCharts = async (req, res) => {
         const firstDayCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
         const firstDayPreviousMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
 
-        // Execute all independent grouping/aggregation queries in parallel
-        const [
-            revenueTrend,
-            expenseTrend,
-            dieselTrend,
-            vehicleStatus,
-            expenseByCategory,
-            topVehicles,
-            dailyDispatches,
-            materialDistribution,
-            poStatus,
-            currentMonthRevenue,
-            previousMonthRevenue
-        ] = await Promise.all([
-            prisma.truckDispatch.groupBy({
-                by: ['date'],
-                where: { date: { gte: daysAgo } },
-                _sum: { totalRevenue: true },
-                orderBy: { date: 'asc' },
-            }),
-            prisma.expense.groupBy({
-                by: ['date'],
-                where: { date: { gte: daysAgo } },
-                _sum: { amount: true },
-                orderBy: { date: 'asc' },
-            }),
-            prisma.dieselLog.groupBy({
-                by: ['date'],
-                where: { date: { gte: daysAgo } },
-                _sum: { dieselFilled: true },
-                orderBy: { date: 'asc' },
-            }),
-            prisma.vehicle.groupBy({
-                by: ['status'],
-                _count: { id: true },
-            }),
-            prisma.expense.groupBy({
-                by: ['category'],
-                _sum: { amount: true },
-                orderBy: { _sum: { amount: 'desc' } },
-            }),
-            prisma.truckDispatch.groupBy({
-                by: ['truckNumber'],
-                where: { date: { gte: daysAgo } },
-                _sum: { totalRevenue: true },
-                _count: { id: true },
-                orderBy: { _sum: { totalRevenue: 'desc' } },
-                take: 10,
-            }),
-            prisma.truckDispatch.groupBy({
-                by: ['date'],
-                where: { date: { gte: daysAgo } },
-                _count: { id: true },
-                orderBy: { date: 'asc' },
-            }),
-            prisma.truckDispatch.groupBy({
-                by: ['materialType'],
-                where: { date: { gte: daysAgo } },
-                _sum: { tonnage: true, totalRevenue: true },
-                orderBy: { _sum: { tonnage: 'desc' } },
-            }),
-            prisma.purchaseOrder.groupBy({
-                by: ['status'],
-                _count: { id: true },
-            }),
-            prisma.truckDispatch.aggregate({
-                _sum: { totalRevenue: true },
-                where: { date: { gte: firstDayCurrentMonth } }
-            }),
-            prisma.truckDispatch.aggregate({
-                _sum: { totalRevenue: true },
-                where: {
-                    date: {
-                        gte: firstDayPreviousMonth,
-                        lt: firstDayCurrentMonth
-                    }
+        // Execute aggregation queries sequentially to respect strict Serverless Connection Limits
+        const revenueTrend = await prisma.truckDispatch.groupBy({
+            by: ['date'],
+            where: { date: { gte: daysAgo } },
+            _sum: { totalRevenue: true },
+            orderBy: { date: 'asc' },
+        });
+
+        const expenseTrend = await prisma.expense.groupBy({
+            by: ['date'],
+            where: { date: { gte: daysAgo } },
+            _sum: { amount: true },
+            orderBy: { date: 'asc' },
+        });
+
+        const dieselTrend = await prisma.dieselLog.groupBy({
+            by: ['date'],
+            where: { date: { gte: daysAgo } },
+            _sum: { dieselFilled: true },
+            orderBy: { date: 'asc' },
+        });
+
+        const vehicleStatus = await prisma.vehicle.groupBy({
+            by: ['status'],
+            _count: { id: true },
+        });
+
+        const expenseByCategory = await prisma.expense.groupBy({
+            by: ['category'],
+            _sum: { amount: true },
+            orderBy: { _sum: { amount: 'desc' } },
+        });
+
+        const topVehicles = await prisma.truckDispatch.groupBy({
+            by: ['truckNumber'],
+            where: { date: { gte: daysAgo } },
+            _sum: { totalRevenue: true },
+            _count: { id: true },
+            orderBy: { _sum: { totalRevenue: 'desc' } },
+            take: 10,
+        });
+
+        const dailyDispatches = await prisma.truckDispatch.groupBy({
+            by: ['date'],
+            where: { date: { gte: daysAgo } },
+            _count: { id: true },
+            orderBy: { date: 'asc' },
+        });
+
+        const materialDistribution = await prisma.truckDispatch.groupBy({
+            by: ['materialType'],
+            where: { date: { gte: daysAgo } },
+            _sum: { tonnage: true, totalRevenue: true },
+            orderBy: { _sum: { tonnage: 'desc' } },
+        });
+
+        const poStatus = await prisma.purchaseOrder.groupBy({
+            by: ['status'],
+            _count: { id: true },
+        });
+
+        const currentMonthRevenue = await prisma.truckDispatch.aggregate({
+            _sum: { totalRevenue: true },
+            where: { date: { gte: firstDayCurrentMonth } }
+        });
+
+        const previousMonthRevenue = await prisma.truckDispatch.aggregate({
+            _sum: { totalRevenue: true },
+            where: {
+                date: {
+                    gte: firstDayPreviousMonth,
+                    lt: firstDayCurrentMonth
                 }
-            })
-        ]);
+            }
+        });
 
         res.json({
             revenueTrend: revenueTrend.map(r => ({
