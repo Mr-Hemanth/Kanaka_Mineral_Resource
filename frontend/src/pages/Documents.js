@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Download as DownloadIcon } from '@mui/icons-material';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const DocumentTypes = [
     'ROYALTY_BILL', 'INVOICE', 'EWAY_BILL', 'TRANSPORT_DOC', 'OTHER'
@@ -94,59 +95,61 @@ const Documents = () => {
         }
     };
 
+    const columns = [
+        { id: 'uploadedAt', label: 'Uploaded', minWidth: 150, format: (val) => new Date(val).toLocaleString() },
+        { id: 'fileName', label: 'File Name', minWidth: 200, format: (val) => <span style={{ fontWeight: 500 }}>{val}</span> },
+        {
+            id: 'type',
+            label: 'Type',
+            minWidth: 150,
+            format: (val) => <Chip label={val.replace('_', ' ')} size="small" color="primary" variant="outlined" />
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'right',
+            minWidth: 120,
+            format: (val, row) => (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                    <IconButton
+                        color="primary"
+                        component={Link}
+                        href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${row.fileUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        size="small"
+                    >
+                        <DownloadIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton color="error" size="small" onClick={() => handleDelete(row.id)}>
+                        <DeleteIcon fontSize="small" />
+                    </IconButton>
+                </Box>
+            )
+        }
+    ];
+
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h4" fontWeight="bold">Documents</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
                     Upload Document
                 </Button>
             </Box>
 
-            <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
-                <Table>
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Uploaded</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>File Name</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow><TableCell colSpan={4} align="center"><CircularProgress size={24} /></TableCell></TableRow>
-                        ) : documents.length === 0 ? (
-                            <TableRow><TableCell colSpan={4} align="center">No documents found</TableCell></TableRow>
-                        ) : (
-                            documents.map((doc) => (
-                                <TableRow key={doc.id} hover>
-                                    <TableCell>{new Date(doc.uploadedAt).toLocaleString()}</TableCell>
-                                    <TableCell sx={{ fontWeight: 'medium' }}>{doc.fileName}</TableCell>
-                                    <TableCell>
-                                        <Chip label={doc.type.replace('_', ' ')} size="small" color="primary" variant="outlined" />
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <IconButton
-                                            color="primary"
-                                            component={Link}
-                                            href={`http://localhost:5000${doc.fileUrl}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            download
-                                        >
-                                            <DownloadIcon size="small" />
-                                        </IconButton>
-                                        <IconButton color="error" onClick={() => handleDelete(doc.id)}>
-                                            <DeleteIcon size="small" />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, mt: 3 }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={documents}
+                    title="Documents"
+                    searchableFields={['fileName', 'type']}
+                />
+            )}
 
             <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                 <form onSubmit={handleSubmit}>

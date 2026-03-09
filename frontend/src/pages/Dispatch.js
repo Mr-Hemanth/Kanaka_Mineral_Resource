@@ -12,6 +12,7 @@ import {
     Visibility as ViewIcon,
 } from '@mui/icons-material';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
 
@@ -131,9 +132,11 @@ const Dispatch = () => {
                 selectedPOItem: null, // Reset item selection
                 materialType: '',
                 pricePerTon: '',
+                buyer: selectedPO.buyerName || '',
+                destination: selectedPO.destination || ''
             }));
         } else {
-            setFormData(prev => ({ ...prev, purchaseOrderId: null, selectedPOItem: null }));
+            setFormData(prev => ({ ...prev, purchaseOrderId: null, selectedPOItem: null, buyer: '', destination: '' }));
         }
     };
 
@@ -235,94 +238,87 @@ const Dispatch = () => {
         return colors[status] || 'default';
     };
 
+    const columns = [
+        { id: 'date', label: 'Date', minWidth: 120, format: (val) => new Date(val).toLocaleDateString() },
+        { id: 'truckNumber', label: 'Truck #', minWidth: 120 },
+        { id: 'materialType', label: 'Material', minWidth: 130 },
+        { id: 'tonnage', label: 'Weight (tons)', align: 'right', minWidth: 130 },
+        {
+            id: 'poNumber', // Virtual col
+            label: 'PO Number',
+            minWidth: 150,
+            format: (val, row) => row.purchaseOrder ? (
+                <Chip
+                    label={row.purchaseOrder.poNumber}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                />
+            ) : '-'
+        },
+        {
+            id: 'totalRevenue',
+            label: 'Total Value',
+            align: 'right',
+            minWidth: 150,
+            format: (val) => formatCurrency(val)
+        },
+        {
+            id: 'paymentStatus',
+            label: 'Payment Status',
+            minWidth: 160,
+            format: (val) => (
+                <Chip
+                    label={val.replace('_', ' ')}
+                    size="small"
+                    color={getPaymentStatusColor(val)}
+                />
+            )
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'center',
+            minWidth: 140,
+            format: (val, row) => (
+                <>
+                    <IconButton size="small" onClick={() => handleView(row)}>
+                        <ViewIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleOpenDialog(row)}>
+                        <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => { setSelectedDispatch(row); setDeleteDialog(true); }}>
+                        <DeleteIcon />
+                    </IconButton>
+                </>
+            )
+        }
+    ];
+
     return (
         <Box>
-            <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
-                Truck Dispatch Management
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                <Typography variant="h4" fontWeight="bold">
+                    Truck Dispatch Management
+                </Typography>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
+                    New Dispatch
+                </Button>
+            </Box>
 
-            {/* Main Table */}
-            <Paper elevation={2} sx={{ borderRadius: 2 }}>
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" fontWeight="bold">All Dispatch Logs</Typography>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
-                        New Dispatch
-                    </Button>
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
                 </Box>
-
-                {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <TableContainer>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell><strong>Date</strong></TableCell>
-                                    <TableCell><strong>Truck #</strong></TableCell>
-                                    <TableCell><strong>Material</strong></TableCell>
-                                    <TableCell align="right"><strong>Weight (tons)</strong></TableCell>
-                                    <TableCell><strong>PO Number</strong></TableCell>
-                                    <TableCell align="right"><strong>Total Value</strong></TableCell>
-                                    <TableCell><strong>Payment Status</strong></TableCell>
-                                    <TableCell align="center"><strong>Actions</strong></TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {dispatches.map((dispatch) => (
-                                    <TableRow key={dispatch.id} hover>
-                                        <TableCell>{new Date(dispatch.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>{dispatch.truckNumber}</TableCell>
-                                        <TableCell>{dispatch.materialType}</TableCell>
-                                        <TableCell align="right">{dispatch.tonnage}</TableCell>
-                                        <TableCell>
-                                            {dispatch.purchaseOrder ? (
-                                                <Chip
-                                                    label={dispatch.purchaseOrder.poNumber}
-                                                    size="small"
-                                                    color="primary"
-                                                    variant="outlined"
-                                                />
-                                            ) : (
-                                                '-'
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            {formatCurrency(dispatch.totalRevenue)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={dispatch.paymentStatus.replace('_', ' ')}
-                                                size="small"
-                                                color={getPaymentStatusColor(dispatch.paymentStatus)}
-                                            />
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <IconButton size="small" onClick={() => handleView(dispatch)}>
-                                                <ViewIcon />
-                                            </IconButton>
-                                            <IconButton size="small" onClick={() => handleOpenDialog(dispatch)}>
-                                                <EditIcon />
-                                            </IconButton>
-                                            <IconButton size="small" onClick={() => { setSelectedDispatch(dispatch); setDeleteDialog(true); }}>
-                                                <DeleteIcon />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {dispatches.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={8} align="center">
-                                            <Alert severity="info" sx={{ mt: 2 }}>No dispatch logs found</Alert>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                )}
-            </Paper>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={dispatches}
+                    title="All Dispatch Logs"
+                    searchableFields={['truckNumber', 'materialType', 'destination', 'buyer', 'paymentStatus']}
+                />
+            )}
 
             {/* Create/Edit Dialog */}
             <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
@@ -333,7 +329,7 @@ const Dispatch = () => {
                         <Grid item xs={12} sm={6}>
                             <Autocomplete
                                 options={purchaseOrders}
-                                getOptionLabel={(option) => `${option.poNumber} - ${option.supplierName}`}
+                                getOptionLabel={(option) => `${option.poNumber} - ${option.buyerName || 'Unknown Buyer'}`}
                                 renderInput={(params) => (
                                     <TextField {...params} label="Select Purchase Order" />
                                 )}
@@ -492,7 +488,7 @@ const Dispatch = () => {
                             {selectedDispatch.purchaseOrder && (
                                 <>
                                     <Grid item xs={12}><Typography><strong>Purchase Order:</strong> {selectedDispatch.purchaseOrder.poNumber}</Typography></Grid>
-                                    <Grid item xs={12}><Typography><strong>Supplier:</strong> {selectedDispatch.purchaseOrder.supplierName}</Typography></Grid>
+                                    <Grid item xs={12}><Typography><strong>Buyer:</strong> {selectedDispatch.purchaseOrder.buyerName}</Typography></Grid>
                                 </>
                             )}
                             <Grid item xs={12}><Typography><strong>Price Per Ton:</strong> ₹{selectedDispatch.pricePerTon}</Typography></Grid>

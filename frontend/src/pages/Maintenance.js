@@ -21,14 +21,23 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const Maintenance = () => {
     const [records, setRecords] = useState([]);
     const [vehicles, setVehicles] = useState([]);
+    const [machines, setMachines] = useState([]);
+    const [inventoryItems, setInventoryItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
+
+    // Form State
+    const [maintenanceType, setMaintenanceType] = useState('vehicle'); // 'vehicle' or 'machine'
     const [formData, setFormData] = useState({
         vehicleId: '',
+        machineId: '',
+        inventoryItemId: '',
+        quantityUsed: '',
         partReplaced: '',
         cost: '',
         nextMaintenanceDue: '',
@@ -36,12 +45,22 @@ const Maintenance = () => {
 
     const fetchData = async () => {
         try {
-            const [mRes, vRes] = await Promise.all([
+            const [mRes, vRes, machRes, invRes] = await Promise.all([
                 api.get('/maintenance'),
-                api.get('/vehicles')
+                api.get('/vehicles'),
+                api.get('/machines'),
+                api.get('/inventory?category=SPARE_PARTS')
             ]);
-            setRecords(mRes.data);
+            const mappedRecords = mRes.data.map(rec => ({
+                ...rec,
+                targetName: rec.vehicle ? `Vehicle: ${rec.vehicle.vehicleNumber}` :
+                    rec.machine ? `Machine: ${rec.machine.name}` : 'Unknown',
+                partInfo: rec.inventoryItem ? `${rec.partReplaced} [${rec.quantityUsed}x ${rec.inventoryItem.name}]` : rec.partReplaced,
+            }));
+            setRecords(mappedRecords);
             setVehicles(vRes.data);
+            setMachines(machRes.data);
+            setInventoryItems(invRes.data);
         } catch (error) {
             console.error('Failed to fetch data', error);
         } finally {
@@ -56,7 +75,7 @@ const Maintenance = () => {
     const handleOpen = () => setOpen(true);
     const handleClose = () => {
         setOpen(false);
-        setFormData({ vehicleId: '', partReplaced: '', cost: '', nextMaintenanceDue: '' });
+        setFormData({ vehicleId: '', machineId: '', inventoryItemId: '', quantityUsed: '', partReplaced: '', cost: '', nextMaintenanceDue: '' });
     };
 
     const handleSubmit = async (e) => {
@@ -83,53 +102,61 @@ const Maintenance = () => {
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
 
+    const columns = [
+        { id: 'date', label: 'Date', minWidth: 100, format: (val) => new Date(val).toLocaleDateString() },
+        {
+            id: 'targetName',
+            label: 'Asset',
+            minWidth: 150,
+            format: (val) => <span style={{ fontWeight: 500 }}>{val || '-'}</span>
+        },
+        { id: 'partInfo', label: 'Service / Parts Used', minWidth: 200 },
+        {
+            id: 'cost',
+            label: 'Cost',
+            align: 'right',
+            minWidth: 120,
+            format: (val) => <span style={{ fontWeight: 'bold', color: '#d32f2f' }}>{formatCurrency(val)}</span>
+        },
+        {
+            id: 'nextMaintenanceDue',
+            label: 'Next Due',
+            minWidth: 120,
+            format: (val) => val ? new Date(val).toLocaleDateString() : '-'
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'right',
+            minWidth: 100,
+            format: (val, row) => (
+                <IconButton color="error" size="small" onClick={() => handleDelete(row.id)}>
+                    <DeleteIcon fontSize="small" />
+                </IconButton>
+            )
+        }
+    ];
+
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h4" fontWeight="bold">Maintenance logs</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
                     Log Maintenance
                 </Button>
             </Box>
 
-            <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
-                <Table>
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Vehicle</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Part Replaced / Service</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Cost</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Next Due</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={24} /></TableCell></TableRow>
-                        ) : records.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} align="center">No maintenance logs found</TableCell></TableRow>
-                        ) : (
-                            records.map((rec) => (
-                                <TableRow key={rec.id} hover>
-                                    <TableCell>{new Date(rec.date).toLocaleDateString()}</TableCell>
-                                    <TableCell sx={{ fontWeight: 'medium' }}>{rec.vehicle?.vehicleNumber}</TableCell>
-                                    <TableCell>{rec.partReplaced}</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                                        {formatCurrency(rec.cost)}
-                                    </TableCell>
-                                    <TableCell>
-                                        {rec.nextMaintenanceDue ? new Date(rec.nextMaintenanceDue).toLocaleDateString() : '-'}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <IconButton color="error" onClick={() => handleDelete(rec.id)}><DeleteIcon size="small" /></IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, mt: 3 }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={records}
+                    title="Maintenance Logs"
+                    searchableFields={['targetName', 'partInfo']}
+                />
+            )}
 
             <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                 <form onSubmit={handleSubmit}>
@@ -138,30 +165,72 @@ const Maintenance = () => {
                         <TextField
                             select
                             margin="dense"
-                            label="Vehicle"
+                            label="Maintenance For"
                             fullWidth
-                            required
-                            value={formData.vehicleId}
-                            onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
+                            value={maintenanceType}
+                            onChange={(e) => {
+                                setMaintenanceType(e.target.value);
+                                setFormData({ ...formData, vehicleId: '', machineId: '' });
+                            }}
+                            sx={{ mb: 2 }}
                         >
-                            {vehicles.map(v => (
-                                <MenuItem key={v.id} value={v.id}>{v.vehicleNumber} ({v.vehicleType})</MenuItem>
-                            ))}
+                            <MenuItem value="vehicle">Vehicle</MenuItem>
+                            <MenuItem value="machine">Machine</MenuItem>
                         </TextField>
+
+                        {maintenanceType === 'vehicle' ? (
+                            <TextField
+                                select margin="dense" label="Select Vehicle" fullWidth required
+                                value={formData.vehicleId}
+                                onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
+                            >
+                                {vehicles.map(v => <MenuItem key={v.id} value={v.id}>{v.vehicleNumber} ({v.vehicleType})</MenuItem>)}
+                            </TextField>
+                        ) : (
+                            <TextField
+                                select margin="dense" label="Select Machine" fullWidth required
+                                value={formData.machineId}
+                                onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
+                            >
+                                {machines.map(m => <MenuItem key={m.id} value={m.id}>{m.name} ({m.type})</MenuItem>)}
+                            </TextField>
+                        )}
+
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, mb: 1 }}>
+                            Optional: Select a spare part from Inventory to deduct stock automatically.
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <TextField
+                                select margin="dense" label="Inventory Item (Spare Part)" fullWidth
+                                value={formData.inventoryItemId}
+                                onChange={(e) => setFormData({ ...formData, inventoryItemId: e.target.value })}
+                            >
+                                <MenuItem value=""><em>None Selected</em></MenuItem>
+                                {inventoryItems.map(item => (
+                                    <MenuItem key={item.id} value={item.id}>
+                                        {item.itemName} ({item.quantity} {item.unit} left @ ₹{item.lastPurchasePrice || 0}/{item.unit})
+                                    </MenuItem>
+                                ))}
+                            </TextField>
+
+                            {formData.inventoryItemId && (
+                                <TextField
+                                    type="number" margin="dense" label="Qty Used" sx={{ width: '120px' }}
+                                    value={formData.quantityUsed}
+                                    onChange={(e) => setFormData({ ...formData, quantityUsed: e.target.value })}
+                                />
+                            )}
+                        </Box>
+
                         <TextField
-                            margin="dense"
-                            label="Part Replaced / Service Performed"
-                            fullWidth
-                            required
+                            margin="dense" label="Service Performed / Issue Details" fullWidth required
                             value={formData.partReplaced}
                             onChange={(e) => setFormData({ ...formData, partReplaced: e.target.value })}
                         />
                         <TextField
-                            type="number"
-                            margin="dense"
-                            label="Total Cost"
-                            fullWidth
-                            required
+                            type="number" margin="dense" label="Labor / Additional Cost" fullWidth
+                            helperText={formData.inventoryItemId ? "Cost of the spare part will be added automatically." : ""}
                             inputProps={{ step: "0.01" }}
                             value={formData.cost}
                             onChange={(e) => setFormData({ ...formData, cost: e.target.value })}

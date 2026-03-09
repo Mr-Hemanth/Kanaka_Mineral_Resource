@@ -23,7 +23,7 @@ const getPurchaseOrders = async (req, res) => {
         if (search) {
             where.OR = [
                 { poNumber: { contains: search, mode: 'insensitive' } },
-                { supplierName: { contains: search, mode: 'insensitive' } },
+                { buyerName: { contains: search, mode: 'insensitive' } },
                 { gstNo: { contains: search, mode: 'insensitive' } },
                 { gstDetails: { contains: search, mode: 'insensitive' } },
                 { notes: { contains: search, mode: 'insensitive' } },
@@ -101,7 +101,7 @@ const getPurchaseOrderById = async (req, res) => {
 // Create new Purchase Order
 const createPurchaseOrder = async (req, res) => {
     try {
-        const { poNumber, orderDate, deliveryDate, supplierName, supplierContact, gstNo, gstDetails, status, totalAmount, paymentTerms, notes, items } = req.body;
+        const { poNumber, orderDate, deliveryDate, buyerName, destination, supplierContact, gstNo, gstDetails, status, totalAmount, paymentTerms, notes, items } = req.body;
 
         // Generate PO number if not provided
         const generatedPoNumber = poNumber || `PO-${Date.now()}`;
@@ -111,7 +111,8 @@ const createPurchaseOrder = async (req, res) => {
                 poNumber: generatedPoNumber,
                 orderDate: orderDate ? new Date(orderDate) : new Date(),
                 deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-                supplierName,
+                buyerName,
+                destination,
                 supplierContact,
                 gstNo,
                 gstDetails,
@@ -149,7 +150,7 @@ const createPurchaseOrder = async (req, res) => {
 // Update Purchase Order
 const updatePurchaseOrder = async (req, res) => {
     try {
-        const { poNumber, orderDate, deliveryDate, supplierName, supplierContact, gstNo, gstDetails, status, totalAmount, paymentTerms, notes } = req.body;
+        const { poNumber, orderDate, deliveryDate, buyerName, destination, supplierContact, gstNo, gstDetails, status, totalAmount, paymentTerms, notes } = req.body;
 
         const purchaseOrder = await prisma.purchaseOrder.update({
             where: { id: parseInt(req.params.id) },
@@ -157,7 +158,8 @@ const updatePurchaseOrder = async (req, res) => {
                 poNumber,
                 orderDate: orderDate ? new Date(orderDate) : undefined,
                 deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
-                supplierName,
+                buyerName,
+                destination,
                 supplierContact,
                 gstNo,
                 gstDetails,

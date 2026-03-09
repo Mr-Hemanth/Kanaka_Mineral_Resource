@@ -36,8 +36,8 @@ import {
     ShoppingCart as ShoppingCartIcon,
     CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import SearchFilter from '../components/SearchFilter';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
 
@@ -45,8 +45,7 @@ const PurchaseOrders = () => {
     const [purchaseOrders, setPurchaseOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
-    const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalItems: 0 });
-    const [searchParams, setSearchParams] = useState({});
+    const [totalItems, setTotalItems] = useState(0);
     const [openDialog, setOpenDialog] = useState(false);
     const [viewDialog, setViewDialog] = useState(false);
     const [deleteDialog, setDeleteDialog] = useState(false);
@@ -56,7 +55,8 @@ const PurchaseOrders = () => {
         poNumber: '',
         orderDate: new Date().toISOString().split('T')[0],
         deliveryDate: '',
-        supplierName: '',
+        buyerName: '',
+        destination: '',
         supplierContact: '',
         gstNo: '',
         gstDetails: '',
@@ -67,44 +67,24 @@ const PurchaseOrders = () => {
         items: [],
     });
 
-    const filters = [
-        {
-            name: 'status',
-            label: 'Status',
-            options: [
-                { value: 'PENDING', label: 'Pending' },
-                { value: 'APPROVED', label: 'Approved' },
-                { value: 'REJECTED', label: 'Rejected' },
-                { value: 'COMPLETED', label: 'Completed' },
-                { value: 'CANCELLED', label: 'Cancelled' },
-            ],
-        },
-    ];
-
-    const sortOptions = [
-        { value: 'createdAt', label: 'Created Date' },
-        { value: 'orderDate', label: 'Order Date' },
-        { value: 'totalAmount', label: 'Total Amount' },
-        { value: 'poNumber', label: 'PO Number' },
-    ];
-
     useEffect(() => {
         fetchPurchaseOrders();
         fetchStats();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pagination.currentPage, searchParams]);
+    }, []);
 
     const fetchPurchaseOrders = async () => {
         try {
             setLoading(true);
-            const params = {
-                page: pagination.currentPage,
-                limit: 10,
-                ...searchParams,
-            };
+            const params = { limit: 1000 };
             const response = await api.get('/purchase-orders', { params });
-            setPurchaseOrders(response.data.data);
-            setPagination(response.data.pagination);
+            if (response.data.data) {
+                setPurchaseOrders(response.data.data);
+                setTotalItems(response.data.pagination?.totalItems || response.data.data.length);
+            } else {
+                setPurchaseOrders(response.data);
+                setTotalItems(response.data.length);
+            }
         } catch (error) {
             showSnackbar('Failed to load purchase orders', 'error');
         } finally {
@@ -121,50 +101,14 @@ const PurchaseOrders = () => {
         }
     };
 
-    const handleSearch = (value) => {
-        setSearchParams(prev => ({ ...prev, search: value }));
-        setPagination(prev => ({ ...prev, currentPage: 1 }));
-    };
-
-    const handleFilter = (filters) => {
-        setSearchParams(prev => ({ ...prev, ...filters }));
-        setPagination(prev => ({ ...prev, currentPage: 1 }));
-    };
-
-    const handleSort = ({ sortBy, order }) => {
-        setSearchParams(prev => ({ ...prev, sortBy, order }));
-    };
-
-    const handleExport = async (format) => {
-        try {
-            const params = { ...searchParams };
-            const response = await api.get(`/purchase-orders/export/${format}`, {
-                params,
-                responseType: 'blob',
-            });
-            const blob = new Blob([response.data], {
-                type: response.headers['content-type'],
-            });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `purchase_orders.${format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'docx'}`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            showSnackbar(`Exported successfully to ${format.toUpperCase()}`, 'success');
-        } catch (error) {
-            showSnackbar('Export failed', 'error');
-        }
-    };
-
     const handleOpenDialog = (po = null) => {
         if (po) {
             setFormData({
                 poNumber: po.poNumber,
                 orderDate: new Date(po.orderDate).toISOString().split('T')[0],
                 deliveryDate: po.deliveryDate ? new Date(po.deliveryDate).toISOString().split('T')[0] : '',
-                supplierName: po.supplierName,
+                buyerName: po.buyerName,
+                destination: po.destination || '',
                 supplierContact: po.supplierContact || '',
                 gstNo: po.gstNo || '',
                 gstDetails: po.gstDetails || '',
@@ -180,7 +124,8 @@ const PurchaseOrders = () => {
                 poNumber: `PO-${Date.now()}`,
                 orderDate: new Date().toISOString().split('T')[0],
                 deliveryDate: '',
-                supplierName: '',
+                buyerName: '',
+                destination: '',
                 supplierContact: '',
                 gstNo: '',
                 gstDetails: '',
@@ -271,6 +216,44 @@ const PurchaseOrders = () => {
         setFormData(prev => ({ ...prev, items: newItems, totalAmount: newItems.reduce((sum, item) => sum + item.totalPrice, 0) }));
     };
 
+    const columns = [
+        { id: 'poNumber', label: 'PO Number', minWidth: 130 },
+        { id: 'orderDate', label: 'Order Date', minWidth: 120, format: (val) => new Date(val).toLocaleDateString() },
+        { id: 'buyerName', label: 'Buyer Name', minWidth: 150 },
+        {
+            id: 'status',
+            label: 'Status',
+            minWidth: 130,
+            format: (val) => <Chip label={val} color={getStatusColor(val)} size="small" />
+        },
+        {
+            id: 'totalAmount',
+            label: 'Total Amount',
+            align: 'right',
+            minWidth: 140,
+            format: (val) => formatCurrency(val)
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'center',
+            minWidth: 150,
+            format: (val, row) => (
+                <>
+                    <IconButton size="small" onClick={() => handleView(row)}>
+                        <ViewIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleOpenDialog(row)}>
+                        <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => { setSelectedPO(row); setDeleteDialog(true); }}>
+                        <DeleteIcon />
+                    </IconButton>
+                </>
+            )
+        }
+    ];
+
     return (
         <Box>
             <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
@@ -311,90 +294,25 @@ const PurchaseOrders = () => {
                 </Grid>
             )}
 
-            {/* Search and Filters */}
-            <SearchFilter
-                onSearch={handleSearch}
-                onFilter={handleFilter}
-                onSort={handleSort}
-                onExport={handleExport}
-                filters={filters}
-                sortOptions={sortOptions}
-                placeholder="Search by PO number, supplier, or notes..."
-            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
+                    New Purchase Order
+                </Button>
+            </Box>
 
-            {/* Main Table */}
-            <Paper elevation={2} sx={{ borderRadius: 2 }}>
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" fontWeight="bold">All Purchase Orders</Typography>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
-                        New Purchase Order
-                    </Button>
+            {/* Advanced Table */}
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, mt: 3 }}>
+                    <CircularProgress />
                 </Box>
-
-                {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <>
-                        <TableContainer>
-                            <Table>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell><strong>PO Number</strong></TableCell>
-                                        <TableCell><strong>Order Date</strong></TableCell>
-                                        <TableCell><strong>Supplier</strong></TableCell>
-                                        <TableCell><strong>Status</strong></TableCell>
-                                        <TableCell align="right"><strong>Total Amount</strong></TableCell>
-                                        <TableCell align="center"><strong>Actions</strong></TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {purchaseOrders.map((po) => (
-                                        <TableRow key={po.id} hover>
-                                            <TableCell>{po.poNumber}</TableCell>
-                                            <TableCell>{new Date(po.orderDate).toLocaleDateString()}</TableCell>
-                                            <TableCell>{po.supplierName}</TableCell>
-                                            <TableCell>
-                                                <Chip label={po.status} color={getStatusColor(po.status)} size="small" />
-                                            </TableCell>
-                                            <TableCell align="right">{formatCurrency(po.totalAmount)}</TableCell>
-                                            <TableCell align="center">
-                                                <IconButton size="small" onClick={() => handleView(po)}>
-                                                    <ViewIcon />
-                                                </IconButton>
-                                                <IconButton size="small" onClick={() => handleOpenDialog(po)}>
-                                                    <EditIcon />
-                                                </IconButton>
-                                                <IconButton size="small" onClick={() => { setSelectedPO(po); setDeleteDialog(true); }}>
-                                                    <DeleteIcon />
-                                                </IconButton>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {purchaseOrders.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} align="center">
-                                                <Alert severity="info" sx={{ mt: 2 }}>No purchase orders found</Alert>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-
-                        {/* Pagination */}
-                        <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
-                            <Pagination
-                                count={pagination.totalPages}
-                                page={pagination.currentPage}
-                                onChange={(e, page) => setPagination(prev => ({ ...prev, currentPage: page }))}
-                                color="primary"
-                            />
-                        </Box>
-                    </>
-                )}
-            </Paper>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={purchaseOrders}
+                    title="All Purchase Orders"
+                    searchableFields={['poNumber', 'buyerName', 'destination', 'supplierContact', 'status', 'notes']}
+                />
+            )}
 
             {/* Create/Edit Dialog */}
             <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
@@ -425,11 +343,14 @@ const PurchaseOrders = () => {
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth label="Total Amount" type="number" value={formData.totalAmount} onChange={(e) => setFormData({ ...formData, totalAmount: parseFloat(e.target.value) || 0 })} />
                         </Grid>
-                        <Grid item xs={12}>
-                            <TextField fullWidth label="Supplier Name" value={formData.supplierName} onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })} />
+                        <Grid item xs={12} sm={6}>
+                            <TextField fullWidth label="Buyer Name" value={formData.buyerName} onChange={(e) => setFormData({ ...formData, buyerName: e.target.value })} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField fullWidth label="Supplier Contact" value={formData.supplierContact} onChange={(e) => setFormData({ ...formData, supplierContact: e.target.value })} />
+                            <TextField fullWidth label="Destination" value={formData.destination} onChange={(e) => setFormData({ ...formData, destination: e.target.value })} />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField fullWidth label="Buyer Contact" value={formData.supplierContact} onChange={(e) => setFormData({ ...formData, supplierContact: e.target.value })} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth label="GST Number" value={formData.gstNo} onChange={(e) => setFormData({ ...formData, gstNo: e.target.value })}
@@ -452,19 +373,24 @@ const PurchaseOrders = () => {
                             {formData.items.map((item, index) => (
                                 <Paper key={index} variant="outlined" sx={{ p: 2, mb: 2 }}>
                                     <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={4}>
+                                        <Grid item xs={12} sm={3}>
                                             <TextField fullWidth size="small" label="Item Name" value={item.itemName} onChange={(e) => updateItem(index, 'itemName', e.target.value)} />
                                         </Grid>
                                         <Grid item xs={12} sm={2}>
                                             <TextField fullWidth size="small" type="number" label="Quantity" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)} />
                                         </Grid>
+                                        {item.id && (
+                                            <Grid item xs={12} sm={2}>
+                                                <TextField fullWidth size="small" label="Dispatched Qty" value={item.dispatchedQuantity || 0} InputProps={{ readOnly: true }} />
+                                            </Grid>
+                                        )}
                                         <Grid item xs={12} sm={2}>
                                             <TextField fullWidth size="small" type="number" label="Unit Price" value={item.unitPrice} onChange={(e) => updateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)} />
                                         </Grid>
                                         <Grid item xs={12} sm={2}>
                                             <TextField fullWidth size="small" label="Total" value={formatCurrency(item.totalPrice)} InputProps={{ readOnly: true }} />
                                         </Grid>
-                                        <Grid item xs={12} sm={2}>
+                                        <Grid item xs={12} sm={1}>
                                             <Button color="error" onClick={() => removeItem(index)}>Remove</Button>
                                         </Grid>
                                     </Grid>
@@ -494,7 +420,14 @@ const PurchaseOrders = () => {
                         <Grid container spacing={2}>
                             <Grid item xs={12} sm={6}><Typography><strong>Order Date:</strong> {new Date(selectedPO.orderDate).toLocaleDateString()}</Typography></Grid>
                             <Grid item xs={12} sm={6}><Typography><strong>Status:</strong> <Chip label={selectedPO.status} color={getStatusColor(selectedPO.status)} size="small" /></Typography></Grid>
-                            <Grid item xs={12}><Typography><strong>Supplier:</strong> {selectedPO.supplierName}</Typography></Grid>
+                            <Grid item xs={12}>
+                                <Typography><strong>Buyer:</strong> {selectedPO.buyerName}</Typography>
+                            </Grid>
+                            {selectedPO.destination && (
+                                <Grid item xs={12}>
+                                    <Typography><strong>Destination:</strong> {selectedPO.destination}</Typography>
+                                </Grid>
+                            )}
                             {selectedPO.supplierContact && <Grid item xs={12}><Typography><strong>Contact:</strong> {selectedPO.supplierContact}</Typography></Grid>}
                             {selectedPO.gstNo && <Grid item xs={12}><Typography><strong>GST No:</strong> {selectedPO.gstNo}</Typography></Grid>}
                             {selectedPO.gstDetails && <Grid item xs={12}><Typography><strong>GST Details:</strong> {selectedPO.gstDetails}</Typography></Grid>}
@@ -503,7 +436,14 @@ const PurchaseOrders = () => {
                                 <Grid item xs={12}>
                                     <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2 }}>Items:</Typography>
                                     {selectedPO.items.map((item, idx) => (
-                                        <Typography key={idx} variant="body2">• {item.itemName} - {item.quantity} {item.unit} @ ${item.unitPrice} = ${item.totalPrice}</Typography>
+                                        <Typography key={idx} variant="body2">
+                                            • {item.itemName} - {item.quantity} {item.unit} @ ₹{item.unitPrice} = ₹{item.totalPrice}
+                                            {item.dispatchedQuantity > 0 && (
+                                                <Typography component="span" variant="caption" sx={{ ml: 1, color: 'primary.main', fontWeight: 'bold' }}>
+                                                    (Dispatched: {item.dispatchedQuantity})
+                                                </Typography>
+                                            )}
+                                        </Typography>
                                     ))}
                                 </Grid>
                             )}

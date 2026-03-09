@@ -34,6 +34,7 @@ model Vehicle {
   updatedAt       DateTime      @updatedAt
   DieselLogs      DieselLog[]
   Maintenances    Maintenance[]
+  VehicleTrips    VehicleTrip[]
 }
 
 model Driver {
@@ -81,6 +82,8 @@ model TruckDispatch {
   // PO Integration
   purchaseOrderId Int?
   purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderItemId Int?
+  purchaseOrderItem PurchaseOrderItem? @relation(fields: [purchaseOrderItemId], references: [id])
   
   // Payment Fields
   transportPricePerTon Float
@@ -111,26 +114,87 @@ model Expense {
 
 model Maintenance {
   id                 Int      @id @default(autoincrement())
-  vehicleId          Int
-  vehicle            Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId          Int?
+  vehicle            Vehicle? @relation(fields: [vehicleId], references: [id])
+  machineId          Int?
+  machine            Machine? @relation(fields: [machineId], references: [id])
   partReplaced       String
   cost               Float
   date               DateTime @default(now())
   nextMaintenanceDue DateTime?
+  inventoryItemId    Int?
+  inventoryItem      InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  quantityUsed       Float?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
 
-model Labour {
-  id        Int      @id @default(autoincrement())
-  name      String
-  date      DateTime @default(now())
-  inTime    String?
-  outTime   String?
-  workType  String
-  payment   Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Worker {
+  id            Int         @id @default(autoincrement())
+  name          String
+  role          String      // e.g., DRILLER, LOADER, CHECKER, ELECTRICIAN
+  contact       String?
+  status        String      @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  WorkerLogs    WorkerLog[]
+  MachineLogs   MachineLog[] // ADDED: Relation to MachineLog operator
+}
+
+model WorkerLog {
+  id            Int      @id @default(autoincrement())
+  workerId      Int
+  worker        Worker   @relation(fields: [workerId], references: [id])
+  date          DateTime @default(now())
+  inTime        String?
+  outTime       String?
+  workType      String
+  advancePayment Float   @default(0)
+  balancePayment Float   @default(0)
+  totalPayment   Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model VehicleTrip {
+  id              Int      @id @default(autoincrement())
+  vehicleId       Int
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+  date            DateTime @default(now())
+  destination     String
+  distance        Float?
+  amountPaid      Float    @default(0)
+  remarks         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Machine {
+  id            Int           @id @default(autoincrement())
+  name          String
+  type          String        // GENERATOR, COMPRESSOR, PUMP, CRUSHER, OTHER
+  model         String?
+  capacity      String?
+  status        String        @default("OPERATIONAL") // OPERATIONAL, UNDER_REPAIR, OUT_OF_ORDER
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  MachineLogs   MachineLog[]
+  Maintenances  Maintenance[]
+}
+
+model MachineLog {
+  id            Int      @id @default(autoincrement())
+  machineId     Int
+  machine       Machine  @relation(fields: [machineId], references: [id])
+  date          DateTime @default(now())
+  hoursWorked   Float    @default(0)
+  readingStart  Float?
+  readingEnd    Float?
+  operatorId    Int?
+  operator      Worker?  @relation(fields: [operatorId], references: [id])
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Document {
@@ -156,8 +220,9 @@ model PurchaseOrder {
   poNumber        String             @unique
   orderDate       DateTime           @default(now())
   deliveryDate    DateTime?
-  supplierName    String
+  buyerName       String             // Renamed from supplierName context
   supplierContact String?
+  destination     String?            // Where to dispatch items to
   gstNo           String?            // GST Identification Number
   gstDetails      String?            // Additional GST details (state, rate, etc.)
   status          String             @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED, CANCELLED
@@ -179,10 +244,12 @@ model PurchaseOrderItem {
   itemName       String
   itemType       String          // MATERIAL, EQUIPMENT, PARTS, FUEL, OTHER
   quantity       Float
+  dispatchedQuantity Float       @default(0) // ADDED: track how much of this order has been dispatched
   unit           String          // LITERS, KG, PIECES, etc.
   unitPrice      Float
   totalPrice     Float
   specifications String?
+  TruckDispatches TruckDispatch[] // Relation back to dispatches
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }
@@ -208,85 +275,14 @@ model InventoryItem {
   user            User?    @relation(fields: [addedBy], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  Maintenances    Maintenance[]
 }
 
-// Site Management
-model Site {
-  id              Int           @id @default(autoincrement())
-  siteName        String
-  location        String
-  startDate       DateTime?
-  endDate         DateTime?
-  status          String        @default("ACTIVE") // ACTIVE, COMPLETED, ON_HOLD
-  siteManager     String?
-  contactNumber   String?
-  description     String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  staff           SiteStaff[]
-  vehicles        SiteVehicle[]
-  machines        SiteMachine[]
-  blastRecords    BlastRecord[]
-}
-
-model SiteStaff {
-  id              Int      @id @default(autoincrement())
-  siteId          Int
-  site            Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  name            String
-  role            String   // MANAGER, SUPERVISOR, OPERATOR, LABORER, SECURITY, OTHER
-  phone           String?
-  email           String?
-  aadharNumber    String?
-  assignedDate    DateTime @default(now())
-  isActive        Boolean  @default(true)
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model SiteVehicle {
-  id              Int      @id @default(autoincrement())
-  siteId          Int
-  site            Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  vehicleNumber   String
-  vehicleType     String   // TRUCK, EXCAVATOR, LOADER, CRANE, DOZER, JCB, OTHER
-  driverName      String?
-  driverPhone     String?
-  status          String   @default("ACTIVE") // ACTIVE, MAINTENANCE, IDLE
-  fuelLevel       Float?   @default(0)  // Percentage
-  hoursWorked     Float?   @default(0)  // Hours
-  lastService     DateTime?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model SiteMachine {
-  id              Int      @id @default(autoincrement())
-  siteId          Int
-  site            Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  machineName     String
-  machineType     String   // GENERATOR, COMPRESSOR, PUMP, MIXER, CRUSHER, OTHER
-  modelNumber     String?
-  serialNumber    String?
-  capacity        String?  // e.g., "500 kVA", "100 CFM"
-  status          String   @default("OPERATIONAL") // OPERATIONAL, UNDER_REPAIR, OUT_OF_ORDER
-  purchaseDate    DateTime?
-  lastMaintenance DateTime?
-  nextMaintenance DateTime?
-  hoursUsed       Float?   @default(0)
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
 
 // Blasting Management
 model BlastRecord {
   id              Int      @id @default(autoincrement())
   date            DateTime @default(now())
-  siteId          Int?
-  site            Site?    @relation(fields: [siteId], references: [id])
   blastNumber     String   // Unique blast identifier
   location        String   // Specific blast location
   totalHoles      Int      // Number of drill holes

@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Receipt as ReceiptIcon } from '@mui/icons-material';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const ExpenseCategories = [
     'DIESEL', 'LABOUR', 'DRIVER', 'MACHINE_REPAIR', 'SPARE_PARTS', 'TRANSPORT', 'OTHER'
@@ -87,63 +88,63 @@ const Expenses = () => {
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
 
+    const columns = [
+        { id: 'date', label: 'Date', minWidth: 100, format: (val) => new Date(val).toLocaleDateString() },
+        {
+            id: 'voucherNo',
+            label: 'Voucher #',
+            minWidth: 120,
+            format: (val) => val ? <Chip label={val} size="small" color="primary" variant="outlined" /> : '-'
+        },
+        {
+            id: 'category',
+            label: 'Category',
+            minWidth: 130,
+            format: (val) => <Chip label={val.replace('_', ' ')} size="small" sx={{ fontWeight: 'medium' }} />
+        },
+        { id: 'paidTo', label: 'Paid To', minWidth: 130, format: (val) => val || '-' },
+        { id: 'paidBy', label: 'Paid By', minWidth: 130, format: (val) => val || '-' },
+        {
+            id: 'amount',
+            label: 'Amount',
+            align: 'right',
+            minWidth: 120,
+            format: (val) => <span style={{ fontWeight: 'bold', color: '#d32f2f' }}>{formatCurrency(val)}</span>
+        },
+        { id: 'paymentMethod', label: 'Payment Method', minWidth: 140, format: (val) => val || 'N/A' },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'right',
+            minWidth: 100,
+            format: (val, row) => (
+                <IconButton color="error" size="small" onClick={() => handleDelete(row.id)}>
+                    <DeleteIcon fontSize="small" />
+                </IconButton>
+            )
+        }
+    ];
+
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h4" fontWeight="bold">Expenses</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
                     Add Expense
                 </Button>
             </Box>
 
-            <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
-                <Table>
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Voucher #</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Category</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Paid To</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Paid By</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>Amount</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Payment Method</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={24} /></TableCell></TableRow>
-                        ) : expenses.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} align="center">No expenses found</TableCell></TableRow>
-                        ) : (
-                            expenses.map((exp) => (
-                                <TableRow key={exp.id} hover>
-                                    <TableCell>{new Date(exp.date).toLocaleDateString()}</TableCell>
-                                    <TableCell>
-                                        {exp.voucherNo ? (
-                                            <Chip label={exp.voucherNo} size="small" color="primary" variant="outlined" />
-                                        ) : (
-                                            '-'
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip label={exp.category.replace('_', ' ')} size="small" sx={{ fontWeight: 'medium' }} />
-                                    </TableCell>
-                                    <TableCell>{exp.paidTo || '-'}</TableCell>
-                                    <TableCell>{exp.paidBy || '-'}</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                                        {formatCurrency(exp.amount)}
-                                    </TableCell>
-                                    <TableCell>{exp.paymentMethod || 'N/A'}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton color="error" onClick={() => handleDelete(exp.id)}><DeleteIcon size="small" /></IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, mt: 3 }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={expenses}
+                    title="All Expenses"
+                    searchableFields={['voucherNo', 'category', 'paidTo', 'paidBy', 'paymentMethod', 'description']}
+                />
+            )}
 
             <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                 <form onSubmit={handleSubmit}>

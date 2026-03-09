@@ -40,14 +40,19 @@ const dieselRoutes = require('./routes/dieselRoutes');
 const dispatchRoutes = require('./routes/dispatchRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const maintenanceRoutes = require('./routes/maintenanceRoutes');
-const labourRoutes = require('./routes/labourRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const purchaseOrderRoutes = require('./routes/purchaseOrderRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
-const siteRoutes = require('./routes/siteRoutes');
 const blastingRoutes = require('./routes/blastingRoutes');
 const userRoutes = require('./routes/userRoutes');
+
+// New Routes
+const machineRoutes = require('./routes/machines');
+const machineLogRoutes = require('./routes/machineLogs');
+const workerRoutes = require('./routes/workers');
+const workerLogRoutes = require('./routes/workerLogs');
+const vehicleTripRoutes = require('./routes/vehicleTrips');
 
 // We will add more routes here
 app.use('/api/auth', authRoutes);
@@ -56,14 +61,19 @@ app.use('/api/diesel', dieselRoutes);
 app.use('/api/dispatch', dispatchRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
-app.use('/api/labour', labourRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/inventory', inventoryRoutes);
-app.use('/api/sites', siteRoutes);
 app.use('/api/blasting', blastingRoutes);
 app.use('/api/users', userRoutes);
+
+// Mount new routes
+app.use('/api/machines', machineRoutes);
+app.use('/api/machine-logs', machineLogRoutes);
+app.use('/api/workers', workerRoutes);
+app.use('/api/worker-logs', workerLogRoutes);
+app.use('/api/vehicle-trips', vehicleTripRoutes);
 
 // Make uploads folder publicly accessible
 app.use('/uploads', express.static('uploads'));

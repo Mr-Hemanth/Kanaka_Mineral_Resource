@@ -20,18 +20,28 @@ import {
     MenuItem,
     CircularProgress,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, DirectionsCar as TripIcon } from '@mui/icons-material';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const Vehicles = () => {
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
+    const [openTripForm, setOpenTripForm] = useState(false);
+    const [selectedVehicle, setSelectedVehicle] = useState(null);
     const [formData, setFormData] = useState({
         vehicleNumber: '',
         driverName: '',
         vehicleType: '',
         status: 'ACTIVE',
+    });
+    const [tripFormData, setTripFormData] = useState({
+        date: new Date().toISOString().split('T')[0],
+        destination: '',
+        distance: '',
+        amountPaid: '',
+        remarks: ''
     });
     const [editingId, setEditingId] = useState(null);
 
@@ -79,6 +89,21 @@ const Vehicles = () => {
         }
     };
 
+    const handleTripSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/vehicle-trips', { ...tripFormData, vehicleId: selectedVehicle.id });
+            setOpenTripForm(false);
+            setTripFormData({
+                date: new Date().toISOString().split('T')[0], destination: '', distance: '', amountPaid: '', remarks: ''
+            });
+            fetchVehicles();
+        } catch (error) {
+            console.error('Failed to save trip', error);
+            alert(error.response?.data?.message || 'Failed to save trip');
+        }
+    };
+
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this vehicle?')) {
             try {
@@ -91,6 +116,40 @@ const Vehicles = () => {
         }
     };
 
+    const columns = [
+        { id: 'vehicleNumber', label: 'Vehicle No.', minWidth: 150 },
+        { id: 'vehicleType', label: 'Type', minWidth: 150 },
+        { id: 'driverName', label: 'Driver', minWidth: 150, format: (val) => val || 'N/A' },
+        {
+            id: 'status',
+            label: 'Status',
+            minWidth: 120,
+            format: (value) => (
+                <Chip
+                    label={value}
+                    color={value === 'ACTIVE' ? 'success' : value === 'MAINTENANCE' ? 'warning' : 'default'}
+                    size="small"
+                    sx={{ fontWeight: 'bold' }}
+                />
+            )
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'right',
+            minWidth: 140,
+            format: (value, row) => (
+                <>
+                    <IconButton color="secondary" title="Log Trip" onClick={() => { setSelectedVehicle(row); setOpenTripForm(true); }}>
+                        <TripIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton color="primary" onClick={() => handleOpen(row)}><EditIcon fontSize="small" /></IconButton>
+                    <IconButton color="error" onClick={() => handleDelete(row.id)}><DeleteIcon fontSize="small" /></IconButton>
+                </>
+            )
+        }
+    ];
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -100,46 +159,18 @@ const Vehicles = () => {
                 </Button>
             </Box>
 
-            <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
-                <Table>
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Vehicle No.</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Driver</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow><TableCell colSpan={5} align="center"><CircularProgress size={24} /></TableCell></TableRow>
-                        ) : vehicles.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} align="center">No vehicles found</TableCell></TableRow>
-                        ) : (
-                            vehicles.map((v) => (
-                                <TableRow key={v.id} hover>
-                                    <TableCell>{v.vehicleNumber}</TableCell>
-                                    <TableCell>{v.vehicleType}</TableCell>
-                                    <TableCell>{v.driverName || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={v.status}
-                                            color={v.status === 'ACTIVE' ? 'success' : v.status === 'MAINTENANCE' ? 'warning' : 'default'}
-                                            size="small"
-                                            sx={{ fontWeight: 'bold' }}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <IconButton color="primary" onClick={() => handleOpen(v)}><EditIcon size="small" /></IconButton>
-                                        <IconButton color="error" onClick={() => handleDelete(v.id)}><DeleteIcon size="small" /></IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={vehicles}
+                    title="Vehicle Directory"
+                    searchableFields={['vehicleNumber', 'vehicleType', 'driverName', 'status']}
+                />
+            )}
 
             <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                 <form onSubmit={handleSubmit}>
@@ -184,6 +215,45 @@ const Vehicles = () => {
                     <DialogActions sx={{ p: 2 }}>
                         <Button onClick={handleClose}>Cancel</Button>
                         <Button type="submit" variant="contained">Save</Button>
+                    </DialogActions>
+                </form>
+            </Dialog>
+
+            {/* Trip Form Dialog */}
+            <Dialog open={openTripForm} onClose={() => setOpenTripForm(false)} maxWidth="sm" fullWidth>
+                <form onSubmit={handleTripSubmit}>
+                    <DialogTitle>Log Trip for {selectedVehicle?.vehicleNumber}</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            margin="dense" label="Date" type="date" fullWidth required
+                            InputLabelProps={{ shrink: true }}
+                            value={tripFormData.date}
+                            onChange={(e) => setTripFormData({ ...tripFormData, date: e.target.value })}
+                        />
+                        <TextField
+                            margin="dense" label="Destination / Route" fullWidth required
+                            value={tripFormData.destination}
+                            onChange={(e) => setTripFormData({ ...tripFormData, destination: e.target.value })}
+                        />
+                        <TextField
+                            margin="dense" label="Distance Traveled (km)" type="number" fullWidth
+                            value={tripFormData.distance}
+                            onChange={(e) => setTripFormData({ ...tripFormData, distance: e.target.value })}
+                        />
+                        <TextField
+                            margin="dense" label="Amount Paid" type="number" fullWidth required
+                            value={tripFormData.amountPaid}
+                            onChange={(e) => setTripFormData({ ...tripFormData, amountPaid: e.target.value })}
+                        />
+                        <TextField
+                            margin="dense" label="Remarks / Transport Notes" fullWidth multiline rows={2}
+                            value={tripFormData.remarks}
+                            onChange={(e) => setTripFormData({ ...tripFormData, remarks: e.target.value })}
+                        />
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <Button onClick={() => setOpenTripForm(false)}>Cancel</Button>
+                        <Button type="submit" variant="contained" color="secondary">Save Trip</Button>
                     </DialogActions>
                 </form>
             </Dialog>

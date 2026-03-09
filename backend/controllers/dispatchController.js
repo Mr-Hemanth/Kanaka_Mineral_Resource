@@ -4,14 +4,15 @@ const prisma = new PrismaClient();
 const getDispatches = async (req, res) => {
     try {
         const dispatches = await prisma.truckDispatch.findMany({
-            include: { 
+            include: {
                 driver: true,
                 purchaseOrder: {
                     select: {
                         poNumber: true,
-                        supplierName: true,
+                        buyerName: true,
                     }
-                }
+                },
+                purchaseOrderItem: true,
             },
             orderBy: { date: 'desc' },
         });
@@ -23,14 +24,14 @@ const getDispatches = async (req, res) => {
 
 const createDispatch = async (req, res) => {
     try {
-        const { 
-            date, 
-            truckNumber, 
-            driverId, 
-            materialType, 
-            tonnage, 
-            destination, 
-            buyer, 
+        const {
+            date,
+            truckNumber,
+            driverId,
+            materialType,
+            tonnage,
+            destination,
+            buyer,
             pricePerTon,
             purchaseOrderId,
             transportPricePerTon,
@@ -39,11 +40,46 @@ const createDispatch = async (req, res) => {
             paymentStatus
         } = req.body;
 
-        // Calculate total revenue from PO price per ton
-        const totalRevenue = parseFloat(tonnage) * parseFloat(pricePerTon);
-        
+        const parsedTonnage = parseFloat(tonnage);
+        const parsedTransportPrice = parseFloat(transportPricePerTon);
+
+        let parsedPurchaseOrderId = null;
+        let parsedPurchaseOrderItemId = null;
+        let finalPricePerTon = parseFloat(pricePerTon);
+
+        // If PO is linked, validate and deduct quantity
+        if (purchaseOrderId && req.body.purchaseOrderItemId) {
+            parsedPurchaseOrderId = parseInt(purchaseOrderId);
+            parsedPurchaseOrderItemId = parseInt(req.body.purchaseOrderItemId);
+
+            const poItem = await prisma.purchaseOrderItem.findUnique({
+                where: { id: parsedPurchaseOrderItemId }
+            });
+
+            if (!poItem) throw new Error("Linked Purchase Order Item not found.");
+
+            const remainingQty = poItem.quantity - poItem.dispatchedQuantity;
+            if (parsedTonnage > remainingQty) {
+                throw new Error(`Dispatch tonnage (${parsedTonnage}) exceeds remaining PO quantity (${remainingQty}).`);
+            }
+
+            // Price calculation logic as requested: Total PO Price = Material Price + Transport Price
+            // So if PO says 1900, and transport is 800, then material is 1100.
+            // But we store the actual PO price as finalPricePerTon, so:
+            finalPricePerTon = poItem.unitPrice;
+
+            // Increment PO item dispatched amount
+            await prisma.purchaseOrderItem.update({
+                where: { id: parsedPurchaseOrderItemId },
+                data: { dispatchedQuantity: poItem.dispatchedQuantity + parsedTonnage }
+            });
+        }
+
+        // Calculate total revenue from PO price per ton (or manual price)
+        const totalRevenue = parsedTonnage * finalPricePerTon;
+
         // Calculate transport values
-        const totalTransportValue = parseFloat(tonnage) * parseFloat(transportPricePerTon);
+        const totalTransportValue = parsedTonnage * parsedTransportPrice;
         const advanceAmount = totalTransportValue * 0.70; // 70% advance
         const balanceAmount = totalTransportValue * 0.30; // 30% balance
 
@@ -53,13 +89,14 @@ const createDispatch = async (req, res) => {
                 truckNumber,
                 driverId: driverId ? parseInt(driverId) : null,
                 materialType,
-                tonnage: parseFloat(tonnage),
+                tonnage: parsedTonnage,
                 destination,
                 buyer,
-                pricePerTon: parseFloat(pricePerTon),
+                pricePerTon: finalPricePerTon,
                 totalRevenue,
-                purchaseOrderId: purchaseOrderId ? parseInt(purchaseOrderId) : null,
-                transportPricePerTon: parseFloat(transportPricePerTon),
+                purchaseOrderId: parsedPurchaseOrderId,
+                purchaseOrderItemId: parsedPurchaseOrderItemId,
+                transportPricePerTon: parsedTransportPrice,
                 totalTransportValue,
                 advanceAmount,
                 balanceAmount,
@@ -72,9 +109,10 @@ const createDispatch = async (req, res) => {
                 purchaseOrder: {
                     select: {
                         poNumber: true,
-                        supplierName: true,
+                        buyerName: true,
                     }
-                }
+                },
+                purchaseOrderItem: true,
             },
         });
 
@@ -86,7 +124,7 @@ const createDispatch = async (req, res) => {
 
 const updateDispatch = async (req, res) => {
     try {
-        const { 
+        const {
             advancePaid,
             balancePaid,
             paymentStatus
@@ -104,9 +142,10 @@ const updateDispatch = async (req, res) => {
                 purchaseOrder: {
                     select: {
                         poNumber: true,
-                        supplierName: true,
+                        buyerName: true,
                     }
-                }
+                },
+                purchaseOrderItem: true,
             },
         });
 

@@ -12,6 +12,7 @@ import {
     Security as SecurityIcon, WorkOutline as WorkIcon, LockReset as LockIcon,
 } from '@mui/icons-material';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const Users = () => {
     const [users, setUsers] = useState([]);
@@ -193,6 +194,76 @@ const Users = () => {
         }
     };
 
+    // Table Columns Configuration
+    const columns = [
+        { id: 'name', label: 'Name', minWidth: 150 },
+        { id: 'email', label: 'Email Address', minWidth: 200 },
+        {
+            id: 'role',
+            label: 'Role',
+            minWidth: 120,
+            format: (value) => (
+                <Chip
+                    icon={getRoleIcon(value)}
+                    label={value}
+                    size="small"
+                    color={getRoleColor(value)}
+                />
+            )
+        },
+        {
+            id: 'activity', // Virtual column since it doesn't map directly to a single field
+            label: 'Activity',
+            minWidth: 150,
+            format: (value, row) => (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Badge badgeContent={row._count?.PurchaseOrders || 0} color="primary">
+                        <Typography variant="caption">POs</Typography>
+                    </Badge>
+                    <Badge badgeContent={row._count?.DieselLogs || 0} color="secondary">
+                        <Typography variant="caption">Diesel</Typography>
+                    </Badge>
+                </Box>
+            )
+        },
+        {
+            id: 'createdAt',
+            label: 'Created',
+            minWidth: 120,
+            format: (value) => new Date(value).toLocaleDateString()
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'right',
+            minWidth: 150,
+            format: (value, row) => (
+                <>
+                    <IconButton size="small" onClick={() => handleView(row)}>
+                        <ViewIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleOpenDialog(row)}>
+                        <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                        size="small"
+                        color="info"
+                        onClick={() => { setSelectedUser(row); setPasswordDialog(true); }}
+                    >
+                        <LockIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => { setSelectedUser(row); setDeleteDialog(true); }}
+                    >
+                        <DeleteIcon fontSize="small" />
+                    </IconButton>
+                </>
+            )
+        }
+    ];
+
     return (
         <Box>
             {/* Page Header */}
@@ -321,108 +392,21 @@ const Users = () => {
                 </Grid>
             </Paper>
 
-            {/* Users Table */}
-            <Paper elevation={2} sx={{ borderRadius: 2 }}>
-                {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <TableContainer>
-                        <Table>
-                            <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                                <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Activity</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Created</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {users.map((user) => (
-                                    <TableRow key={user.id} hover>
-                                        <TableCell>
-                                            <Typography variant="body2" fontWeight="bold">{user.name}</Typography>
-                                        </TableCell>
-                                        <TableCell>{user.email}</TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                icon={getRoleIcon(user.role)}
-                                                label={user.role}
-                                                size="small"
-                                                color={getRoleColor(user.role)}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                                <Badge badgeContent={user._count.PurchaseOrders} color="primary">
-                                                    <Typography variant="caption">POs</Typography>
-                                                </Badge>
-                                                <Badge badgeContent={user._count.DieselLogs} color="secondary">
-                                                    <Typography variant="caption">Diesel</Typography>
-                                                </Badge>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                                        <TableCell align="right">
-                                            <IconButton size="small" onClick={() => handleView(user)}>
-                                                <ViewIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton size="small" onClick={() => handleOpenDialog(user)}>
-                                                <EditIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                color="info"
-                                                onClick={() => { setSelectedUser(user); setPasswordDialog(true); }}
-                                            >
-                                                <LockIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                color="error"
-                                                onClick={() => { setSelectedUser(user); setDeleteDialog(true); }}
-                                            >
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {users.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={6} align="center">
-                                            <Alert severity="info">No users found</Alert>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                )}
-            </Paper>
-
-            {/* Pagination */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-                <Typography variant="body2">
-                    Showing {users.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} users
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                        disabled={pagination.page === 1}
-                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                    >
-                        Previous
-                    </Button>
-                    <Button
-                        disabled={pagination.page >= pagination.totalPages}
-                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                    >
-                        Next
-                    </Button>
+            {/* Advanced Users Table */}
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
                 </Box>
-            </Box>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={users}
+                    title="User Directory"
+                    searchableFields={['name', 'email', 'role']}
+                />
+            )}
+
+            {/* Removed redundant pagination since AdvancedTable handles it */}
 
             {/* Create/Edit User Dialog */}
             <Dialog open={userDialog} onClose={() => setUserDialog(false)} maxWidth="sm" fullWidth>

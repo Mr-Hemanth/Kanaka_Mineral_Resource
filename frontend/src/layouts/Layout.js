@@ -34,6 +34,7 @@ import {
     ShoppingCart,
     Inventory as InventoryIcon,
     Business as BusinessIcon,
+    PrecisionManufacturing as MachineIcon,
     Gavel as BlastIcon,
     AdminPanelSettings as AdminPanelIcon,
 } from '@mui/icons-material';
@@ -71,8 +72,8 @@ const Layout = () => {
     const menuItems = [
         { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
         { text: 'Purchase Orders', icon: <ShoppingCart />, path: '/purchase-orders', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
-        { text: 'Sites', icon: <BusinessIcon />, path: '/sites', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
         { text: 'Inventory', icon: <InventoryIcon />, path: '/inventory', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
+        { text: 'Machines', icon: <MachineIcon />, path: '/machines', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
         { text: 'Blasting', icon: <BlastIcon />, path: '/blasting', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
         { text: 'Users', icon: <AdminPanelIcon />, path: '/users', roles: ['ADMIN'] },
         { text: 'Vehicles', icon: <LocalShipping />, path: '/vehicles', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
@@ -80,7 +81,7 @@ const Layout = () => {
         { text: 'Dispatch', icon: <PrecisionManufacturing />, path: '/dispatch', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
         { text: 'Expenses', icon: <ReceiptLong />, path: '/expenses', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
         { text: 'Maintenance', icon: <Engineering />, path: '/maintenance', roles: ['ADMIN', 'SUPERVISOR', 'OWNER'] },
-        { text: 'Labour', icon: <People />, path: '/labour', roles: ['ADMIN', 'SUPERVISOR'] },
+        { text: 'Workers', icon: <People />, path: '/workers', roles: ['ADMIN', 'SUPERVISOR'] },
         { text: 'Documents', icon: <Description />, path: '/documents', roles: ['ADMIN', 'OWNER', 'SUPERVISOR'] },
     ];
 

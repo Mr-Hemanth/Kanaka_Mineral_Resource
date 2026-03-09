@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const DieselLogs = () => {
     const [logs, setLogs] = useState([]);
@@ -87,6 +88,44 @@ const DieselLogs = () => {
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
 
+    const columns = [
+        { id: 'date', label: 'Date', minWidth: 120, format: (val) => new Date(val).toLocaleDateString() },
+        {
+            id: 'type',
+            label: 'Type',
+            minWidth: 120,
+            format: (val) => val === 'BOUGHT'
+                ? <Chip label="Purchased" size="small" color="success" />
+                : <Chip label="Filled" size="small" color="primary" />
+        },
+        {
+            id: 'locationOrVehicle', // virtual 
+            label: 'Vehicle/Location',
+            minWidth: 150,
+            format: (val, row) => row.type === 'BOUGHT' ? (row.location || '-') : (row.vehicle?.vehicleNumber || '-')
+        },
+        { id: 'dieselFilled', label: 'Quantity (L)', minWidth: 120, format: (val) => `${val} L` },
+        { id: 'pricePerLitre', label: 'Price/L', minWidth: 120, format: (val) => formatCurrency(val) },
+        {
+            id: 'totalCost',
+            label: 'Total Cost',
+            minWidth: 150,
+            format: (val) => <span style={{ fontWeight: 'bold', color: '#d32f2f' }}>{formatCurrency(val)}</span>
+        },
+        { id: 'supplier', label: 'Supplier', minWidth: 130, format: (val) => val || '-' },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'right',
+            minWidth: 100,
+            format: (val, row) => (
+                <IconButton color="error" onClick={() => handleDelete(row.id)}>
+                    <DeleteIcon fontSize="small" />
+                </IconButton>
+            )
+        }
+    ];
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -96,58 +135,18 @@ const DieselLogs = () => {
                 </Button>
             </Box>
 
-            <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 2 }}>
-                <Table>
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Vehicle/Location</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Quantity (L)</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Price/L</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Total Cost</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Supplier</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow><TableCell colSpan={8} align="center"><CircularProgress size={24} /></TableCell></TableRow>
-                        ) : logs.length === 0 ? (
-                            <TableRow><TableCell colSpan={8} align="center">No logs found</TableCell></TableRow>
-                        ) : (
-                            logs.map((log) => (
-                                <TableRow key={log.id} hover>
-                                    <TableCell>{new Date(log.date).toLocaleDateString()}</TableCell>
-                                    <TableCell>
-                                        {log.type === 'BOUGHT' ? (
-                                            <Chip label="Purchased" size="small" color="success" />
-                                        ) : (
-                                            <Chip label="Filled" size="small" color="primary" />
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        {log.type === 'BOUGHT' ? (
-                                            log.location || '-'
-                                        ) : (
-                                            log.vehicle?.vehicleNumber || '-'
-                                        )}
-                                    </TableCell>
-                                    <TableCell>{log.dieselFilled} L</TableCell>
-                                    <TableCell>{formatCurrency(log.pricePerLitre)}</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                                        {formatCurrency(log.totalCost)}
-                                    </TableCell>
-                                    <TableCell>{log.supplier || '-'}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton color="error" onClick={() => handleDelete(log.id)}><DeleteIcon size="small" /></IconButton>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={logs}
+                    title="Diesel Fuel Logs"
+                    searchableFields={['type', 'supplier', 'location', 'remarks']}
+                />
+            )}
 
             <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                 <form onSubmit={handleSubmit}>
@@ -166,7 +165,7 @@ const DieselLogs = () => {
                             <MenuItem value="FILLED">Vehicle Filled</MenuItem>
                             <MenuItem value="BOUGHT">Purchased/Bought</MenuItem>
                         </TextField>
-                    
+
                         {formData.type === 'FILLED' ? (
                             <TextField
                                 select

@@ -15,11 +15,11 @@ import DieselLogs from './pages/DieselLogs';
 import Dispatch from './pages/Dispatch';
 import Expenses from './pages/Expenses';
 import Maintenance from './pages/Maintenance';
-import Labour from './pages/Labour';
+import Workers from './pages/Workers';
 import Documents from './pages/Documents';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Inventory from './pages/Inventory';
-import Sites from './pages/Sites';
+import Machines from './pages/Machines';
 import Blasting from './pages/Blasting';
 import Users from './pages/Users';
 
@@ -82,7 +82,7 @@ const App = () => {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="purchase-orders" element={<PurchaseOrders />} />
               <Route path="inventory" element={<Inventory />} />
-              <Route path="sites" element={<Sites />} />
+              <Route path="machines" element={<Machines />} />
               <Route path="blasting" element={<Blasting />} />
               <Route path="users" element={<Users />} />
               <Route path="vehicles" element={<Vehicles />} />
@@ -90,7 +90,7 @@ const App = () => {
               <Route path="dispatch" element={<Dispatch />} />
               <Route path="expenses" element={<Expenses />} />
               <Route path="maintenance" element={<Maintenance />} />
-              <Route path="labour" element={<Labour />} />
+              <Route path="workers" element={<Workers />} />
               <Route path="documents" element={<Documents />} />
               <Route path="*" element={<Box sx={{ p: 3 }}><Typography variant="h4">404 - Not Found</Typography></Box>} />
             </Route>

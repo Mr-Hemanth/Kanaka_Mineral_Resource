@@ -12,14 +12,13 @@ import {
     AddCircleOutline as AddStockIcon, Warning as WarningIcon,
     CheckCircle as CheckCircleIcon, Inventory as InventoryIcon,
 } from '@mui/icons-material';
-import SearchFilter from '../components/SearchFilter';
 import api from '../utils/api';
+import AdvancedTable from '../components/AdvancedTable';
 
 const Inventory = () => {
     const [inventoryItems, setInventoryItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalItems: 0 });
-    const [searchParams, setSearchParams] = useState({});
+    const [totalItems, setTotalItems] = useState(0);
     const [openDialog, setOpenDialog] = useState(false);
     const [viewDialog, setViewDialog] = useState(false);
     const [stockDialog, setStockDialog] = useState(false);
@@ -43,59 +42,24 @@ const Inventory = () => {
         description: '',
     });
 
-    const filters = [
-        {
-            name: 'itemType',
-            label: 'Item Type',
-            options: [
-                { value: 'SPARE_PART', label: 'Spare Part' },
-                { value: 'TOOL', label: 'Tool' },
-                { value: 'EQUIPMENT', label: 'Equipment' },
-                { value: 'CONSUMABLE', label: 'Consumable' },
-                { value: 'MATERIAL', label: 'Material' },
-                { value: 'OTHER', label: 'Other' },
-            ],
-        },
-        {
-            name: 'status',
-            label: 'Status',
-            options: [
-                { value: 'IN_STOCK', label: 'In Stock' },
-                { value: 'LOW_STOCK', label: 'Low Stock' },
-                { value: 'OUT_OF_STOCK', label: 'Out of Stock' },
-                { value: 'DISCONTINUED', label: 'Discontinued' },
-            ],
-        },
-    ];
-
-    const sortOptions = [
-        { value: 'itemName', label: 'Item Name' },
-        { value: 'quantity', label: 'Quantity' },
-        { value: 'totalValue', label: 'Total Value' },
-        { value: 'createdAt', label: 'Created Date' },
-    ];
-
     useEffect(() => {
         fetchInventory();
         fetchLowStockCount();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pagination.currentPage, searchParams]);
+    }, []);
 
     const fetchInventory = async () => {
         try {
             setLoading(true);
-            const params = {
-                page: pagination.currentPage,
-                limit: 10,
-                ...searchParams,
-            };
+            const params = { limit: 1000 };
             const response = await api.get('/inventory', { params });
-            setInventoryItems(response.data.data);
-            setPagination(prev => ({
-                ...prev,
-                totalPages: response.data.pagination.totalPages,
-                totalItems: response.data.pagination.totalItems,
-            }));
+            if (response.data.data) {
+                setInventoryItems(response.data.data);
+                setTotalItems(response.data.pagination?.totalItems || response.data.data.length);
+            } else {
+                setInventoryItems(response.data);
+                setTotalItems(response.data.length);
+            }
         } catch (error) {
             showSnackbar('Failed to load inventory items', 'error');
         } finally {
@@ -110,20 +74,6 @@ const Inventory = () => {
         } catch (error) {
             console.error('Failed to fetch low stock items');
         }
-    };
-
-    const handleSearch = (query) => {
-        setSearchParams(prev => ({ ...prev, search: query }));
-        setPagination(prev => ({ ...prev, currentPage: 1 }));
-    };
-
-    const handleFilter = (filters) => {
-        setSearchParams(prev => ({ ...prev, ...filters }));
-        setPagination(prev => ({ ...prev, currentPage: 1 }));
-    };
-
-    const handleSort = ({ sortBy, order }) => {
-        setSearchParams(prev => ({ ...prev, sortBy, order }));
     };
 
     const handleOpenDialog = (item = null) => {
@@ -239,11 +189,82 @@ const Inventory = () => {
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
 
+    const columns = [
+        {
+            id: 'itemName',
+            label: 'Item Name',
+            minWidth: 150,
+            format: (val, row) => (
+                <>
+                    <Typography fontWeight="medium">{row.itemName}</Typography>
+                    {row.category && (
+                        <Typography variant="caption" color="text.secondary">
+                            {row.category}
+                        </Typography>
+                    )}
+                </>
+            )
+        },
+        {
+            id: 'itemType',
+            label: 'Type',
+            minWidth: 120,
+            format: (val) => <Chip label={val.replace('_', ' ')} size="small" />
+        },
+        { id: 'partNumber', label: 'Part Number', minWidth: 130, format: (val) => val || '-' },
+        {
+            id: 'quantity',
+            label: 'Quantity',
+            align: 'right',
+            minWidth: 100,
+            format: (val, row) => (
+                <Badge badgeContent={row.quantity <= row.minStock ? '!' : null} color="warning">
+                    {row.quantity} {row.unit.toLowerCase()}
+                </Badge>
+            )
+        },
+        { id: 'location', label: 'Location', minWidth: 130, format: (val) => val || '-' },
+        {
+            id: 'status',
+            label: 'Status',
+            minWidth: 130,
+            format: (val) => <Chip label={val.replace('_', ' ')} size="small" color={getStatusColor(val)} />
+        },
+        { id: 'totalValue', label: 'Value', align: 'right', minWidth: 120, format: (val) => formatCurrency(val) },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'center',
+            minWidth: 160,
+            format: (val, row) => (
+                <>
+                    <IconButton size="small" onClick={() => handleView(row)}>
+                        <ViewIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleOpenStockDialog(row)}>
+                        {row.quantity <= row.minStock ? <AddStockIcon color="warning" /> : <AddStockIcon />}
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleOpenDialog(row)}>
+                        <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => { setSelectedItem(row); setDeleteDialog(true); }}>
+                        <DeleteIcon />
+                    </IconButton>
+                </>
+            )
+        }
+    ];
+
     return (
         <Box>
-            <Typography variant="h4" fontWeight="bold" sx={{ mb: 3 }}>
-                Inventory & Storage Management
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                <Typography variant="h4" fontWeight="bold">
+                    Inventory & Storage Management
+                </Typography>
+                <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
+                    Add Item
+                </Button>
+            </Box>
 
             {/* Stats Cards */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -253,7 +274,7 @@ const Inventory = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Box>
                                     <Typography color="text.secondary" variant="body2">Total Items</Typography>
-                                    <Typography variant="h4">{pagination.totalItems}</Typography>
+                                    <Typography variant="h4">{totalItems}</Typography>
                                 </Box>
                                 <InventoryIcon color="primary" sx={{ fontSize: 48, opacity: 0.3 }} />
                             </Box>
@@ -305,115 +326,19 @@ const Inventory = () => {
                 </Grid>
             </Grid>
 
-            {/* Search and Filters */}
-            <SearchFilter
-                onSearch={handleSearch}
-                onFilter={handleFilter}
-                onSort={handleSort}
-                filters={filters}
-                sortOptions={sortOptions}
-                placeholder="Search by item name, part number, category, or location..."
-            />
-
-            {/* Main Table */}
-            <Paper elevation={2} sx={{ borderRadius: 2, mt: 3 }}>
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" fontWeight="bold">All Inventory Items</Typography>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
-                        Add Item
-                    </Button>
+            {/* Advanced Table */}
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, mt: 3 }}>
+                    <CircularProgress />
                 </Box>
-
-                {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <>
-                        <TableContainer>
-                            <Table>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell><strong>Item Name</strong></TableCell>
-                                        <TableCell><strong>Type</strong></TableCell>
-                                        <TableCell><strong>Part Number</strong></TableCell>
-                                        <TableCell align="right"><strong>Quantity</strong></TableCell>
-                                        <TableCell><strong>Location</strong></TableCell>
-                                        <TableCell><strong>Status</strong></TableCell>
-                                        <TableCell align="right"><strong>Value</strong></TableCell>
-                                        <TableCell align="center"><strong>Actions</strong></TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {inventoryItems.map((item) => (
-                                        <TableRow key={item.id} hover>
-                                            <TableCell>
-                                                <Typography fontWeight="medium">{item.itemName}</Typography>
-                                                {item.category && (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {item.category}
-                                                    </Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip label={item.itemType.replace('_', ' ')} size="small" />
-                                            </TableCell>
-                                            <TableCell>{item.partNumber || '-'}</TableCell>
-                                            <TableCell align="right">
-                                                <Badge badgeContent={item.quantity <= item.minStock ? '!' : null} color="warning">
-                                                    {item.quantity} {item.unit.toLowerCase()}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>{item.location || '-'}</TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={item.status.replace('_', ' ')}
-                                                    size="small"
-                                                    color={getStatusColor(item.status)}
-                                                />
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                {formatCurrency(item.totalValue)}
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                <IconButton size="small" onClick={() => handleView(item)}>
-                                                    <ViewIcon />
-                                                </IconButton>
-                                                <IconButton size="small" onClick={() => handleOpenStockDialog(item)}>
-                                                    {item.quantity <= item.minStock ? <AddStockIcon color="warning" /> : <AddStockIcon />}
-                                                </IconButton>
-                                                <IconButton size="small" onClick={() => handleOpenDialog(item)}>
-                                                    <EditIcon />
-                                                </IconButton>
-                                                <IconButton size="small" onClick={() => { setSelectedItem(item); setDeleteDialog(true); }}>
-                                                    <DeleteIcon />
-                                                </IconButton>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {inventoryItems.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={8} align="center">
-                                                <Alert severity="info" sx={{ mt: 2 }}>No inventory items found</Alert>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-
-                        {/* Pagination */}
-                        <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
-                            <Pagination
-                                count={pagination.totalPages}
-                                page={pagination.currentPage}
-                                onChange={(e, page) => setPagination(prev => ({ ...prev, currentPage: page }))}
-                                color="primary"
-                            />
-                        </Box>
-                    </>
-                )}
-            </Paper>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={inventoryItems}
+                    title="All Inventory Items"
+                    searchableFields={['itemName', 'partNumber', 'category', 'location', 'itemType', 'status']}
+                />
+            )}
 
             {/* Create/Edit Dialog */}
             <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>

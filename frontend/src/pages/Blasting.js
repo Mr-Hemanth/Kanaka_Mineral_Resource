@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import AdvancedTable from '../components/AdvancedTable';
 
 const Blasting = () => {
     const { user } = useAuth();
@@ -34,11 +35,7 @@ const Blasting = () => {
     const [deleteDialog, setDeleteDialog] = useState(false);
     const [viewDialog, setViewDialog] = useState(false);
 
-    // Search & Filter
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ALL');
-    const [siteFilter, setSiteFilter] = useState(null);
-    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+    const [totalItems, setTotalItems] = useState(0);
 
     // Form
     const [formData, setFormData] = useState({
@@ -69,7 +66,7 @@ const Blasting = () => {
         fetchSites();
         fetchRecords();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pagination.page, search, statusFilter, siteFilter]);
+    }, []);
 
     const fetchSites = async () => {
         try {
@@ -83,23 +80,18 @@ const Blasting = () => {
     const fetchRecords = async () => {
         try {
             setLoading(true);
-            const params = {
-                page: pagination.page,
-                limit: pagination.limit,
-                search,
-                status: statusFilter,
-                siteId: siteFilter?.id || '',
-            };
+            const params = { limit: 1000 };
             const response = await api.get('/blasting', { params });
-            setRecords(response.data.data);
-            setPagination(prev => ({
-                ...prev,
-                total: response.data.total,
-                totalPages: response.data.totalPages,
-            }));
-            setLoading(false);
+            if (response.data.data) {
+                setRecords(response.data.data);
+                setTotalItems(response.data.pagination?.totalItems || response.data.data.length);
+            } else {
+                setRecords(response.data);
+                setTotalItems(response.data.length);
+            }
         } catch (error) {
             showSnackbar('Failed to load blast records', 'error');
+        } finally {
             setLoading(false);
         }
     };
@@ -203,7 +195,61 @@ const Blasting = () => {
         return colors[status] || 'default';
     };
 
-
+    const columns = [
+        { id: 'date', label: 'Date', minWidth: 100, format: (val) => new Date(val).toLocaleDateString() },
+        { id: 'blastNumber', label: 'Blast #', minWidth: 120, format: (val) => <Typography sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '0.875rem' }}>{val}</Typography> },
+        { id: 'location', label: 'Location', minWidth: 130 },
+        { id: 'siteName', label: 'Site', minWidth: 120, format: (val, row) => row.site?.siteName || '-' },
+        { id: 'totalHoles', label: 'Holes', minWidth: 90 },
+        { id: 'explosiveUsed', label: 'Explosive (kg)', minWidth: 120, format: (val) => `${val}` },
+        { id: 'volumeBlasted', label: 'Volume (m³)', minWidth: 120, format: (val) => `${val}` },
+        {
+            id: 'status',
+            label: 'Status',
+            minWidth: 130,
+            format: (val) => (
+                <Chip
+                    label={val}
+                    size="small"
+                    color={getStatusColor(val)}
+                    icon={
+                        val === 'COMPLETED' ? <CheckCircleIcon fontSize="small" /> :
+                            val === 'PLANNED' ? <WarningIcon fontSize="small" /> :
+                                <CancelIcon fontSize="small" />
+                    }
+                />
+            )
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'right',
+            minWidth: 150,
+            format: (val, row) => (
+                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                    <Tooltip title="View Details" placement="left">
+                        <IconButton size="small" onClick={() => handleView(row)} sx={{ color: '#667eea' }}>
+                            <ViewIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    {canEdit && (
+                        <Tooltip title="Edit Record" placement="left">
+                            <IconButton size="small" onClick={() => handleOpenDialog(row)} sx={{ color: '#f59e0b' }}>
+                                <EditIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                    {canDelete && (
+                        <Tooltip title="Delete Record" placement="left">
+                            <IconButton size="small" color="error" onClick={() => { setSelectedRecord(row); setDeleteDialog(true); }}>
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                </Box>
+            )
+        }
+    ];
 
     return (
         <Box>
@@ -236,292 +282,38 @@ const Blasting = () => {
                 </Box>
             </Box>
 
-            {/* Filters */}
-            <Paper elevation={0} sx={{
-                p: 3,
-                mb: 3,
-                borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-                border: '1px solid rgba(0,0,0,0.08)'
-            }}>
-                <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <TextField
-                            fullWidth
-                            label="Search"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Blast #, Location..."
-                            InputProps={{
-                                startAdornment: <Box sx={{ mr: 1, color: 'text.secondary' }}>🔍</Box>,
-                            }}
-                            variant="outlined"
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <FormControl fullWidth>
-                            <InputLabel>Status</InputLabel>
-                            <Select
-                                value={statusFilter}
-                                label="Status"
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                startAdornment={<Box sx={{ mr: 1 }}>📊</Box>}
-                            >
-                                <MenuItem value="ALL">All Status</MenuItem>
-                                <MenuItem value="PLANNED">Planned</MenuItem>
-                                <MenuItem value="COMPLETED">Completed</MenuItem>
-                                <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Autocomplete
-                            options={sites}
-                            getOptionLabel={(option) => option.siteName}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="Filter by Site"
-                                    InputProps={{
-                                        ...params.InputProps,
-                                        startAdornment: (
-                                            <Box sx={{ mr: 1, color: 'text.secondary' }}>🏢</Box>
-                                        ),
-                                    }}
-                                />
-                            )}
-                            value={siteFilter}
-                            onChange={(e, v) => setSiteFilter(v)}
-                            clearText="Clear Site"
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        {canAdd && (
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                startIcon={<AddIcon />}
-                                onClick={() => handleOpenDialog()}
-                                sx={{
-                                    height: '56px',
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-                                    '&:hover': {
-                                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
-                                        transform: 'translateY(-2px)',
-                                    },
-                                }}
-                            >
-                                New Blast Record
-                            </Button>
-                        )}
-                    </Grid>
-                </Grid>
-            </Paper>
-
-            {/* Records Table */}
-            <Paper elevation={0} sx={{
-                borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                border: '1px solid rgba(0,0,0,0.08)',
-                overflow: 'hidden'
-            }}>
-                {loading ? (
-                    <Box sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        p: 8,
-                        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-                        borderRadius: 3
-                    }}>
-                        <CircularProgress size={40} thickness={4} />
-                    </Box>
-                ) : (
-                    <TableContainer>
-                        <Table>
-                            <TableHead sx={{
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            }}>
-                                <TableRow>
-                                    {[
-                                        { label: 'Date', icon: '📅' },
-                                        { label: 'Blast #', icon: '💥' },
-                                        { label: 'Location', icon: '📍' },
-                                        { label: 'Site', icon: '🏢' },
-                                        { label: 'Holes', icon: '⚙️' },
-                                        { label: 'Explosive (kg)', icon: '🧨' },
-                                        { label: 'Volume (m³)', icon: '📊' },
-                                        { label: 'Status', icon: '✅' },
-                                        { label: 'Actions', icon: '🔧' },
-                                    ].map((col) => (
-                                        <TableCell
-                                            key={col.label}
-                                            sx={{
-                                                fontWeight: 'bold',
-                                                color: 'white',
-                                                fontSize: '0.9rem',
-                                            }}
-                                        >
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <span>{col.icon}</span>
-                                                {col.label}
-                                            </Box>
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {records.map((record, index) => (
-                                    <TableRow
-                                        key={record.id}
-                                        hover
-                                        sx={{
-                                            '&:hover': {
-                                                backgroundColor: '#f5f7fa',
-                                                transform: 'scale(1.005)',
-                                                transition: 'all 0.2s ease-in-out',
-                                            },
-                                            backgroundColor: index % 2 === 0 ? '#ffffff' : '#fafbfc',
-                                        }}
-                                    >
-                                        <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                                        <TableCell sx={{ fontWeight: 'bold', color: 'primary.main' }}>{record.blastNumber}</TableCell>
-                                        <TableCell>{record.location}</TableCell>
-                                        <TableCell>{record.site?.siteName || '-'}</TableCell>
-                                        <TableCell>{record.totalHoles}</TableCell>
-                                        <TableCell>{record.explosiveUsed} kg</TableCell>
-                                        <TableCell>{record.volumeBlasted} m³</TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={record.status}
-                                                size="small"
-                                                color={getStatusColor(record.status)}
-                                                icon={
-                                                    record.status === 'COMPLETED' ? <CheckCircleIcon fontSize="small" /> :
-                                                        record.status === 'PLANNED' ? <WarningIcon fontSize="small" /> :
-                                                            <CancelIcon fontSize="small" />
-                                                }
-                                            />
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                                                <Tooltip title="View Details" placement="left">
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleView(record)}
-                                                        sx={{
-                                                            color: '#667eea',
-                                                            '&:hover': {
-                                                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                                                transform: 'scale(1.1)',
-                                                            },
-                                                        }}
-                                                    >
-                                                        <ViewIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                {canEdit && (
-                                                    <Tooltip title="Edit Record" placement="left">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleOpenDialog(record)}
-                                                            sx={{
-                                                                color: '#f59e0b',
-                                                                '&:hover': {
-                                                                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                                                                    transform: 'scale(1.1)',
-                                                                },
-                                                            }}
-                                                        >
-                                                            <EditIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                )}
-                                                {canDelete && (
-                                                    <Tooltip title="Delete Record" placement="left">
-                                                        <IconButton
-                                                            size="small"
-                                                            color="error"
-                                                            onClick={() => { setSelectedRecord(record); setDeleteDialog(true); }}
-                                                            sx={{
-                                                                '&:hover': {
-                                                                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                                                                    transform: 'scale(1.1)',
-                                                                },
-                                                            }}
-                                                        >
-                                                            <DeleteIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                )}
-                                            </Box>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {records.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={9} align="center">
-                                            <Alert severity="info">No blast records found</Alert>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                )}
-            </Paper>
-
-            {/* Pagination */}
-            <Paper elevation={0} sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                p: 2,
-                mt: 2,
-                borderRadius: 3,
-                boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                border: '1px solid rgba(0,0,0,0.08)'
-            }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <AssessmentIcon sx={{ color: '#667eea' }} />
-                    <Typography variant="body2" fontWeight="bold">
-                        Showing {records.length > 0 ? ((pagination.page - 1) * pagination.limit) + 1 : 0} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} records
-                    </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+                {canAdd && (
                     <Button
-                        disabled={pagination.page === 1}
-                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                        variant="outlined"
-                        startIcon={<span>←</span>}
-                        sx={{
-                            borderRadius: 2,
-                            '&:hover': {
-                                transform: 'translateX(-2px)',
-                                transition: 'all 0.2s',
-                            },
-                        }}
-                    >
-                        Previous
-                    </Button>
-                    <Button
-                        disabled={pagination.page >= pagination.totalPages}
-                        onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                         variant="contained"
-                        endIcon={<span>→</span>}
+                        startIcon={<AddIcon />}
+                        onClick={() => handleOpenDialog()}
                         sx={{
                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            borderRadius: 2,
                             '&:hover': {
-                                transform: 'translateX(2px)',
-                                transition: 'all 0.2s',
+                                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
+                                transform: 'translateY(-2px)',
                             },
                         }}
                     >
-                        Next
+                        New Blast Record
                     </Button>
+                )}
+            </Box>
+
+            {/* Advanced Table */}
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, mt: 3 }}>
+                    <CircularProgress />
                 </Box>
-            </Paper>
+            ) : (
+                <AdvancedTable
+                    columns={columns}
+                    data={records}
+                    title="Blasting Records"
+                    searchableFields={['blastNumber', 'location', 'status', 'supervisor', 'agency', 'remarks']}
+                />
+            )}
 
             {/* Create/Edit Dialog */}
             <Dialog open={recordDialog} onClose={() => setRecordDialog(false)} maxWidth="md" fullWidth>
