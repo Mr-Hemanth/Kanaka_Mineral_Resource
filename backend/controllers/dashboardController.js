@@ -47,15 +47,15 @@ const getDashboardSummary = async (req, res) => {
 
         // Total Purchase Orders
         const totalPOs = await prisma.purchaseOrder.count();
-        
+
         // Pending POs
         const pendingPOs = await prisma.purchaseOrder.count({
             where: { status: 'PENDING' },
         });
 
         // Total Labour Cost
-        const labourCost = await prisma.labour.aggregate({
-            _sum: { payment: true },
+        const labourCost = await prisma.workerLog.aggregate({
+            _sum: { totalPayment: true },
             where: { date: dateFilter }
         });
 
@@ -68,7 +68,7 @@ const getDashboardSummary = async (req, res) => {
             profitLoss,
             totalPOs,
             pendingPOs,
-            totalLabourCost: labourCost._sum.payment || 0,
+            totalLabourCost: labourCost._sum.totalPayment || 0,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -161,11 +161,11 @@ const getDashboardCharts = async (req, res) => {
 
         const previousMonthRevenue = await prisma.truckDispatch.aggregate({
             _sum: { totalRevenue: true },
-            where: { 
-                date: { 
+            where: {
+                date: {
                     gte: firstDayPreviousMonth,
-                    lt: firstDayCurrentMonth 
-                } 
+                    lt: firstDayCurrentMonth
+                }
             }
         });
 
