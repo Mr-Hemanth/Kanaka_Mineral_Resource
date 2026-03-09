@@ -64,6 +64,9 @@ model DieselLog {
   supervisor    User     @relation("SupervisorLogs", fields: [supervisorId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([date])
+  @@index([vehicleId])
 }
 
 model TruckDispatch {
@@ -96,6 +99,10 @@ model TruckDispatch {
   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([date])
+  @@index([materialType])
+  @@index([truckNumber])
 }
 
 model Expense {
@@ -110,6 +117,9 @@ model Expense {
   paidBy        String?  // Person who made the payment
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([date])
+  @@index([category])
 }
 
 model Maintenance {
@@ -154,6 +164,9 @@ model WorkerLog {
   totalPayment   Float
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([date])
+  @@index([workerId])
 }
 
 model VehicleTrip {
@@ -167,6 +180,9 @@ model VehicleTrip {
   remarks         String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([date])
+  @@index([vehicleId])
 }
 
 model Machine {
@@ -195,6 +211,9 @@ model MachineLog {
   notes         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([date])
+  @@index([machineId])
 }
 
 model Document {
