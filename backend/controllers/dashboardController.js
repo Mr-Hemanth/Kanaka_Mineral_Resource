@@ -67,6 +67,11 @@ const getDashboardCharts = async (req, res) => {
         const daysAgo = new Date();
         daysAgo.setDate(daysAgo.getDate() - parseInt(period));
 
+        // 9. Monthly Performance (current month vs previous month)
+        const currentDate = new Date();
+        const firstDayCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const firstDayPreviousMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+
         // Execute all independent grouping/aggregation queries in parallel
         const [
             revenueTrend,
