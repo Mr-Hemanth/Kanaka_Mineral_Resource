@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prismaClient');
 
 // Get all Blast Records with search, filter, sort, pagination
 const getBlastRecords = async (req, res) => {

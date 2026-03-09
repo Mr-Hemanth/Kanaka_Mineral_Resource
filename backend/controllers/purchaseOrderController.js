@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prismaClient');
 
 // Get all Purchase Orders with search, filter, sort, and pagination
 const getPurchaseOrders = async (req, res) => {

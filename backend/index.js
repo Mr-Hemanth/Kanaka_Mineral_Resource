@@ -1,12 +1,14 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const { PrismaClient } = require('@prisma/client');
+const compression = require('compression');
 
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
+
+// Enable gzip compression for all API responses
+app.use(compression());
 
 // Force CORS headers middleware
 app.use((req, res, next) => {
