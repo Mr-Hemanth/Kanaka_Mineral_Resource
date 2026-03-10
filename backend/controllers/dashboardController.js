@@ -32,11 +32,8 @@ const getDashboardSummary = async (req, res) => {
             prisma.expense.findMany({ where: { date: dateFilter } }),
             prisma.truckDispatch.findMany({ where: { date: dateFilter } }),
             prisma.purchaseOrder.count(),
-            prisma.purchaseOrder.count({ where: { status: 'PENDING' } }),
-            prisma.workerLog.aggregate({
-                _sum: { totalPayment: true },
-                where: { date: dateFilter }
-            })
+            prisma.purchaseOrder.count({ where: { status: 'PENDING' } })
+            // workerLog removed as it might not be properly populated yet
         ]);
 
         const totalDieselUsed = dieselLogs.reduce((acc, log) => acc + log.dieselFilled, 0);
@@ -53,11 +50,11 @@ const getDashboardSummary = async (req, res) => {
             profitLoss,
             totalPOs,
             pendingPOs,
-            totalLabourCost: labourCost._sum.totalPayment || 0,
+            totalLabourCost: 0, // Temporarily 0 until stable worker metrics
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
-    } 
+    }
 };
 
 const getDashboardCharts = async (req, res) => {

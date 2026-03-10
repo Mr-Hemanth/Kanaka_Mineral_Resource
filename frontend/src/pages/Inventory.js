@@ -31,7 +31,6 @@ const Inventory = () => {
         itemName: '',
         itemType: 'SPARE_PART',
         category: '',
-        partNumber: '',
         quantity: 0,
         unit: 'PIECES',
         minStock: 5,
@@ -82,7 +81,6 @@ const Inventory = () => {
                 itemName: item.itemName,
                 itemType: item.itemType,
                 category: item.category || '',
-                partNumber: item.partNumber || '',
                 quantity: item.quantity,
                 unit: item.unit,
                 minStock: item.minStock,
@@ -98,7 +96,6 @@ const Inventory = () => {
                 itemName: '',
                 itemType: 'SPARE_PART',
                 category: '',
-                partNumber: '',
                 quantity: 0,
                 unit: 'PIECES',
                 minStock: 5,
@@ -211,7 +208,6 @@ const Inventory = () => {
             minWidth: 120,
             format: (val) => <Chip label={val.replace('_', ' ')} size="small" />
         },
-        { id: 'partNumber', label: 'Part Number', minWidth: 130, format: (val) => val || '-' },
         {
             id: 'quantity',
             label: 'Quantity',
@@ -336,7 +332,7 @@ const Inventory = () => {
                     columns={columns}
                     data={inventoryItems}
                     title="All Inventory Items"
-                    searchableFields={['itemName', 'partNumber', 'category', 'location', 'itemType', 'status']}
+                    searchableFields={['itemName', 'category', 'location', 'itemType', 'status']}
                 />
             )}
 
@@ -363,9 +359,6 @@ const Inventory = () => {
                         </Grid>
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth label="Category" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} placeholder="ENGINE, ELECTRICAL, etc." />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField fullWidth label="Part Number" value={formData.partNumber} onChange={(e) => setFormData({ ...formData, partNumber: e.target.value })} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth label="Quantity" type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })} />
@@ -448,7 +441,6 @@ const Inventory = () => {
                         <Grid container spacing={2}>
                             <Grid item xs={12} sm={6}><Typography><strong>Type:</strong> {selectedItem.itemType.replace('_', ' ')}</Typography></Grid>
                             <Grid item xs={12} sm={6}><Typography><strong>Category:</strong> {selectedItem.category || '-'}</Typography></Grid>
-                            <Grid item xs={12} sm={6}><Typography><strong>Part Number:</strong> {selectedItem.partNumber || '-'}</Typography></Grid>
                             <Grid item xs={12} sm={6}><Typography><strong>Location:</strong> {selectedItem.location || '-'}</Typography></Grid>
                             <Grid item xs={12} sm={6}><Typography><strong>Quantity:</strong> {selectedItem.quantity} {selectedItem.unit}</Typography></Grid>
                             <Grid item xs={12} sm={6}><Typography><strong>Min Stock:</strong> {selectedItem.minStock} {selectedItem.unit}</Typography></Grid>

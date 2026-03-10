@@ -39,10 +39,7 @@ const Dispatch = () => {
         selectedPOItem: null, // Store selected PO item
         transportPricePerTon: '',
         totalTransportValue: 0,
-        advanceAmount: 0,
-        balanceAmount: 0,
-        advancePaid: false,
-        balancePaid: false,
+        royaltyAmount: 0,
         paymentStatus: 'PENDING',
     });
 
@@ -87,10 +84,7 @@ const Dispatch = () => {
                 purchaseOrderId: dispatch.purchaseOrderId,
                 transportPricePerTon: dispatch.transportPricePerTon?.toString() || '',
                 totalTransportValue: dispatch.totalTransportValue || 0,
-                advanceAmount: dispatch.advanceAmount || 0,
-                balanceAmount: dispatch.balanceAmount || 0,
-                advancePaid: dispatch.advancePaid,
-                balancePaid: dispatch.balancePaid,
+                royaltyAmount: dispatch.royaltyAmount || 0,
                 paymentStatus: dispatch.paymentStatus,
             });
             setSelectedDispatch(dispatch);
@@ -107,10 +101,7 @@ const Dispatch = () => {
                 purchaseOrderId: null,
                 transportPricePerTon: '',
                 totalTransportValue: 0,
-                advanceAmount: 0,
-                balanceAmount: 0,
-                advancePaid: false,
-                balancePaid: false,
+                royaltyAmount: 0,
                 paymentStatus: 'PENDING',
             });
             setSelectedDispatch(null);
@@ -152,16 +143,14 @@ const Dispatch = () => {
         }
     };
 
-    const calculatePayment = (transportPrice, tonnage) => {
-        const totalTransportValue = parseFloat(transportPrice) * parseFloat(tonnage);
-        const advanceAmount = totalTransportValue * 0.70; // 70%
-        const balanceAmount = totalTransportValue * 0.30; // 30%
+    const calculatePayment = (transportPrice, tonnage, royalty) => {
+        const totalTransportValue = parseFloat(transportPrice) * parseFloat(tonnage) || 0;
+        const royaltyAmount = parseFloat(royalty) || 0;
 
         setFormData(prev => ({
             ...prev,
             totalTransportValue,
-            advanceAmount,
-            balanceAmount,
+            royaltyAmount,
         }));
     };
 
@@ -170,7 +159,7 @@ const Dispatch = () => {
         setFormData(prev => {
             const newData = { ...prev, transportPricePerTon: transportPrice };
             if (prev.tonnage) {
-                calculatePayment(transportPrice, prev.tonnage);
+                calculatePayment(transportPrice, prev.tonnage, prev.royaltyAmount);
             }
             return newData;
         });
@@ -181,7 +170,18 @@ const Dispatch = () => {
         setFormData(prev => {
             const newData = { ...prev, tonnage };
             if (prev.transportPricePerTon) {
-                calculatePayment(prev.transportPricePerTon, tonnage);
+                calculatePayment(prev.transportPricePerTon, tonnage, prev.royaltyAmount);
+            }
+            return newData;
+        });
+    };
+
+    const handleRoyaltyChange = (e) => {
+        const royalty = e.target.value;
+        setFormData(prev => {
+            const newData = { ...prev, royaltyAmount: royalty };
+            if (prev.transportPricePerTon && prev.tonnage) {
+                calculatePayment(prev.transportPricePerTon, prev.tonnage, royalty);
             }
             return newData;
         });
@@ -191,8 +191,7 @@ const Dispatch = () => {
         try {
             if (selectedDispatch) {
                 await api.put(`/dispatch/${selectedDispatch.id}`, {
-                    advancePaid: formData.advancePaid,
-                    balancePaid: formData.balancePaid,
+                    royaltyAmount: formData.royaltyAmount,
                     paymentStatus: formData.paymentStatus,
                 });
                 showSnackbar('Dispatch updated successfully', 'success');
@@ -231,9 +230,8 @@ const Dispatch = () => {
     const getPaymentStatusColor = (status) => {
         const colors = {
             PENDING: 'warning',
-            ADVANCE_PAID: 'info',
-            BALANCE_PAID: 'secondary',
-            FULLY_PAID: 'success',
+            PARTIAL_PAID: 'info',
+            PAID: 'success',
         };
         return colors[status] || 'default';
     };
@@ -257,11 +255,15 @@ const Dispatch = () => {
             ) : '-'
         },
         {
-            id: 'totalRevenue',
-            label: 'Total Value',
+            id: 'netRemaining',
+            label: 'Net Remaining',
             align: 'right',
             minWidth: 150,
-            format: (val) => formatCurrency(val)
+            format: (val, row) => {
+                const totalTrans = row.totalTransportValue || 0;
+                const royalty = row.royaltyAmount || 0;
+                return formatCurrency(totalTrans - royalty);
+            }
         },
         {
             id: 'paymentStatus',
@@ -403,53 +405,28 @@ const Dispatch = () => {
                             />
                         </Grid>
 
-                        {/* Advance & Balance Calculation */}
                         <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
-                                label="Advance (70%)"
-                                value={formatCurrency(formData.advanceAmount)}
-                                InputProps={{ readOnly: true }}
-                                sx={{ backgroundColor: '#e3f2fd' }}
-                                helperText="70% of total"
+                                label="Royalty Amount"
+                                type="number"
+                                value={formData.royaltyAmount}
+                                onChange={handleRoyaltyChange}
+                                helperText="Amount deducted as royalty"
                             />
                         </Grid>
                         <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
-                                label="Balance (30%)"
-                                value={formatCurrency(formData.balanceAmount)}
+                                label="Net Remaining"
+                                value={formatCurrency((formData.totalTransportValue || 0) - (formData.royaltyAmount || 0))}
                                 InputProps={{ readOnly: true }}
-                                sx={{ backgroundColor: '#ffebee' }}
-                                helperText="30% of total"
+                                sx={{ backgroundColor: '#e8f5e9' }}
+                                helperText="Total Transport Value - Royalty Amount"
                             />
                         </Grid>
 
                         {/* Payment Status */}
-                        <Grid item xs={12}>
-                            <FormControl component="fieldset">
-                                <FormGroup row>
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                checked={formData.advancePaid}
-                                                onChange={(e) => setFormData({ ...formData, advancePaid: e.target.checked })}
-                                            />
-                                        }
-                                        label="Advance Paid"
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                checked={formData.balancePaid}
-                                                onChange={(e) => setFormData({ ...formData, balancePaid: e.target.checked })}
-                                            />
-                                        }
-                                        label="Balance Paid"
-                                    />
-                                </FormGroup>
-                            </FormControl>
-                        </Grid>
 
                         <Grid item xs={12}>
                             <FormControl fullWidth>
@@ -460,9 +437,8 @@ const Dispatch = () => {
                                     onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
                                 >
                                     <MenuItem value="PENDING">Pending</MenuItem>
-                                    <MenuItem value="ADVANCE_PAID">Advance Paid</MenuItem>
-                                    <MenuItem value="BALANCE_PAID">Balance Paid</MenuItem>
-                                    <MenuItem value="FULLY_PAID">Fully Paid</MenuItem>
+                                    <MenuItem value="PARTIAL_PAID">Partial Paid</MenuItem>
+                                    <MenuItem value="PAID">Paid</MenuItem>
                                 </Select>
                             </FormControl>
                         </Grid>
@@ -499,16 +475,8 @@ const Dispatch = () => {
                             </Grid>
                             <Grid item xs={12} sm={6}><Typography><strong>Transport Rate:</strong> ₹{selectedDispatch.transportPricePerTon}/ton</Typography></Grid>
                             <Grid item xs={12} sm={6}><Typography><strong>Total Transport Value:</strong> {formatCurrency(selectedDispatch.totalTransportValue)}</Typography></Grid>
-                            <Grid item xs={12} sm={6}><Typography><strong>Advance (70%):</strong> {formatCurrency(selectedDispatch.advanceAmount)}</Typography></Grid>
-                            <Grid item xs={12} sm={6}><Typography><strong>Balance (30%):</strong> {formatCurrency(selectedDispatch.balanceAmount)}</Typography></Grid>
-                            <Grid item xs={12} sm={6}>
-                                <Typography><strong>Advance Paid:</strong> </Typography>
-                                {selectedDispatch.advancePaid ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <Typography><strong>Balance Paid:</strong> </Typography>
-                                {selectedDispatch.balancePaid ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}
-                            </Grid>
+                            <Grid item xs={12} sm={6}><Typography><strong>Royalty Amount:</strong> {formatCurrency(selectedDispatch.royaltyAmount)}</Typography></Grid>
+                            <Grid item xs={12} sm={6}><Typography><strong>Net Remaining:</strong> {formatCurrency((selectedDispatch.totalTransportValue || 0) - (selectedDispatch.royaltyAmount || 0))}</Typography></Grid>
                             <Grid item xs={12}>
                                 <Typography><strong>Payment Status:</strong> </Typography>
                                 <Chip label={selectedDispatch.paymentStatus.replace('_', ' ')} color={getPaymentStatusColor(selectedDispatch.paymentStatus)} size="small" />

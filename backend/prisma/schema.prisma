@@ -89,13 +89,10 @@ model TruckDispatch {
   purchaseOrderItem PurchaseOrderItem? @relation(fields: [purchaseOrderItemId], references: [id])
   
   // Payment Fields
-  transportPricePerTon Float
-  totalTransportValue  Float
-  advanceAmount        Float
-  balanceAmount        Float
-  advancePaid          Boolean @default(false)
-  balancePaid          Boolean @default(false)
-  paymentStatus        String  @default("PENDING") // PENDING, ADVANCE_PAID, BALANCE_PAID, FULLY_PAID
+  transportPricePerTon  Float     @default(0)
+  totalTransportValue   Float     @default(0)
+  royaltyAmount         Float     @default(0) // Replacing advance/balance
+  paymentStatus         String    @default("PENDING") // PENDING, PAID
   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -279,7 +276,6 @@ model InventoryItem {
   itemName        String
   itemType        String   // SPARE_PART, TOOL, EQUIPMENT, CONSUMABLE, MATERIAL, OTHER
   category        String?  // ENGINE, ELECTRICAL, HYDRAULIC, TIRE, etc.
-  partNumber      String?  // Manufacturer part number
   quantity        Float    @default(0)
   unit            String   @default("PIECES") // PIECES, LITERS, KG, METERS, etc.
   minStock        Float    @default(0)  // Minimum stock level for alerts
@@ -303,22 +299,11 @@ model BlastRecord {
   id              Int      @id @default(autoincrement())
   date            DateTime @default(now())
   blastNumber     String   // Unique blast identifier
-  location        String   // Specific blast location
   totalHoles      Int      // Number of drill holes
   holeDepth       Float    // Depth in meters
   explosiveUsed   Float    // Total explosive in kg
-  detonatorCount  Int      // Number of detonators
-  powderFactor    Float    // Explosive per cubic meter (kg/m³)
   volumeBlasted   Float    // Volume blasted in m³
-  chargePerHole   Float    // Average charge per hole
-  stemmingLength  Float?   // Stemming length in meters
   blastingTime    DateTime? // Actual blast time
-  supervisor      String?  // Blasting supervisor
-  agency          String?  // Blasting agency/company
-  weatherCondition String? // Weather during blast
-  vibrationLevel  Float?   // Vibration level (if monitored)
-  flyrockDistance Float?   // Flyrock distance observed
-  safetyMeasures  String?  // Safety measures taken
   remarks         String?
   status          String   @default("COMPLETED") // PLANNED, COMPLETED, CANCELLED
   createdAt       DateTime @default(now())

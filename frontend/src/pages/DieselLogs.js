@@ -203,22 +203,24 @@ const DieselLogs = () => {
                         <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
                             <TextField
                                 type="number"
-                                label="Diesel Filled (Litres)"
+                                label="Diesel (Litres)"
                                 fullWidth
                                 required
                                 inputProps={{ step: "0.01" }}
                                 value={formData.dieselFilled}
                                 onChange={(e) => setFormData({ ...formData, dieselFilled: e.target.value })}
                             />
-                            <TextField
-                                type="number"
-                                label="Price per Litre"
-                                fullWidth
-                                required
-                                inputProps={{ step: "0.01" }}
-                                value={formData.pricePerLitre}
-                                onChange={(e) => setFormData({ ...formData, pricePerLitre: e.target.value })}
-                            />
+                            {formData.type === 'BOUGHT' && (
+                                <TextField
+                                    type="number"
+                                    label="Total Cost (Bought amount)"
+                                    fullWidth
+                                    required
+                                    inputProps={{ step: "0.01" }}
+                                    value={formData.totalCost}
+                                    onChange={(e) => setFormData({ ...formData, totalCost: e.target.value })}
+                                />
+                            )}
                         </Box>
                         <TextField
                             margin="dense"

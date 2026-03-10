@@ -14,8 +14,19 @@ const getDieselLogs = async (req, res) => {
 
 const createDieselLog = async (req, res) => {
     try {
-        const { vehicleId, date, type, dieselFilled, pricePerLitre, supplier, location, remarks } = req.body;
-        const totalCost = parseFloat(dieselFilled) * parseFloat(pricePerLitre);
+        const { vehicleId, date, type, dieselFilled, pricePerLitre, totalCost, supplier, location, remarks } = req.body;
+
+        let calculatedTotalCost = 0;
+        let calculatedPricePerLitre = 0;
+
+        if (type === 'BOUGHT') {
+            calculatedTotalCost = parseFloat(totalCost) || 0;
+            calculatedPricePerLitre = calculatedTotalCost / parseFloat(dieselFilled) || 0;
+        } else {
+            // For FILLED, price and total cost are not strictly tracked at entry per user request
+            calculatedPricePerLitre = 0;
+            calculatedTotalCost = 0;
+        }
 
         const log = await prisma.dieselLog.create({
             data: {
@@ -23,8 +34,8 @@ const createDieselLog = async (req, res) => {
                 vehicleId: vehicleId ? parseInt(vehicleId) : null,
                 type: type || 'FILLED',
                 dieselFilled: parseFloat(dieselFilled),
-                pricePerLitre: parseFloat(pricePerLitre),
-                totalCost,
+                pricePerLitre: calculatedPricePerLitre,
+                totalCost: calculatedTotalCost,
                 supplier,
                 location,
                 remarks,

@@ -34,8 +34,7 @@ const createDispatch = async (req, res) => {
             pricePerTon,
             purchaseOrderId,
             transportPricePerTon,
-            advancePaid,
-            balancePaid,
+            royaltyAmount,
             paymentStatus
         } = req.body;
 
@@ -79,8 +78,8 @@ const createDispatch = async (req, res) => {
 
         // Calculate transport values
         const totalTransportValue = parsedTonnage * parsedTransportPrice;
-        const advanceAmount = totalTransportValue * 0.70; // 70% advance
-        const balanceAmount = totalTransportValue * 0.30; // 30% balance
+        const parsedRoyaltyAmount = parseFloat(royaltyAmount) || 0;
+        const remainingBalance = totalTransportValue - parsedRoyaltyAmount;
 
         const dispatch = await prisma.truckDispatch.create({
             data: {
@@ -97,10 +96,7 @@ const createDispatch = async (req, res) => {
                 purchaseOrderItemId: parsedPurchaseOrderItemId,
                 transportPricePerTon: parsedTransportPrice,
                 totalTransportValue,
-                advanceAmount,
-                balanceAmount,
-                advancePaid: advancePaid || false,
-                balancePaid: balancePaid || false,
+                royaltyAmount: parsedRoyaltyAmount,
                 paymentStatus: paymentStatus || 'PENDING',
             },
             include: {
@@ -124,16 +120,20 @@ const createDispatch = async (req, res) => {
 const updateDispatch = async (req, res) => {
     try {
         const {
-            advancePaid,
-            balancePaid,
+            royaltyAmount,
             paymentStatus
         } = req.body;
+
+        const originalDispatch = await prisma.truckDispatch.findUnique({
+            where: { id: parseInt(req.params.id) }
+        });
+
+        const newRoyaltyAmount = royaltyAmount !== undefined ? parseFloat(royaltyAmount) : originalDispatch.royaltyAmount;
 
         const dispatch = await prisma.truckDispatch.update({
             where: { id: parseInt(req.params.id) },
             data: {
-                advancePaid: advancePaid !== undefined ? advancePaid : undefined,
-                balancePaid: balancePaid !== undefined ? balancePaid : undefined,
+                royaltyAmount: newRoyaltyAmount,
                 paymentStatus: paymentStatus || undefined,
             },
             include: {

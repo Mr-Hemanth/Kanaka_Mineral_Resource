@@ -186,14 +186,7 @@ const Dashboard = () => {
                         color="warning"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        title="Labour Cost"
-                        value={formatCurrency(summary?.totalLabourCost || 0)}
-                        icon={<People />}
-                        color="secondary"
-                    />
-                </Grid>
+
             </Grid>
 
             {/* Monthly Comparison */}

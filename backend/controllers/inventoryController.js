@@ -22,7 +22,6 @@ const getInventoryItems = async (req, res) => {
         if (search) {
             where.OR = [
                 { itemName: { contains: search, mode: 'insensitive' } },
-                { partNumber: { contains: search, mode: 'insensitive' } },
                 { category: { contains: search, mode: 'insensitive' } },
                 { location: { contains: search, mode: 'insensitive' } },
                 { description: { contains: search, mode: 'insensitive' } },
@@ -100,7 +99,6 @@ const createInventoryItem = async (req, res) => {
             itemName,
             itemType,
             category,
-            partNumber,
             quantity,
             unit,
             minStock,
@@ -127,7 +125,6 @@ const createInventoryItem = async (req, res) => {
                 itemName,
                 itemType: itemType || 'OTHER',
                 category,
-                partNumber,
                 quantity: parseFloat(quantity) || 0,
                 unit: unit || 'PIECES',
                 minStock: parseFloat(minStock) || 0,
@@ -160,7 +157,6 @@ const updateInventoryItem = async (req, res) => {
             itemName,
             itemType,
             category,
-            partNumber,
             quantity,
             unit,
             minStock,
@@ -173,8 +169,8 @@ const updateInventoryItem = async (req, res) => {
         } = req.body;
 
         // Calculate total value
-        const totalValue = (quantity !== undefined ? parseFloat(quantity) : 0) * 
-                          (lastPurchasePrice !== undefined ? parseFloat(lastPurchasePrice) : 0);
+        const totalValue = (quantity !== undefined ? parseFloat(quantity) : 0) *
+            (lastPurchasePrice !== undefined ? parseFloat(lastPurchasePrice) : 0);
 
         // Auto-determine status if not provided
         let finalStatus = status;
@@ -195,7 +191,6 @@ const updateInventoryItem = async (req, res) => {
                 itemName,
                 itemType,
                 category,
-                partNumber,
                 quantity: quantity !== undefined ? parseFloat(quantity) : undefined,
                 unit,
                 minStock: minStock !== undefined ? parseFloat(minStock) : undefined,
@@ -224,7 +219,7 @@ const updateInventoryItem = async (req, res) => {
 const updateStock = async (req, res) => {
     try {
         const { quantityChange, reason } = req.body; // Positive for add, negative for remove
-        
+
         const item = await prisma.inventoryItem.findUnique({
             where: { id: parseInt(req.params.id) },
         });
@@ -234,7 +229,7 @@ const updateStock = async (req, res) => {
         }
 
         const newQuantity = item.quantity + parseFloat(quantityChange);
-        
+
         // Determine new status
         let newStatus = 'IN_STOCK';
         if (newQuantity <= 0) {
